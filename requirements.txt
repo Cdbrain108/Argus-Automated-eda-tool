@@ -1,0 +1,17 @@
+streamlit>=1.32
+pandas
+openpyxl
+python-dotenv
+plotly
+groq
+openai
+matplotlib
+seaborn
+numpy
+scikit-learn
+xgboost
+lightgbm
+eli5
+PyMuPDF
+gdown
+validators

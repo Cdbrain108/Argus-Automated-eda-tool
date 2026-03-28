@@ -1,0 +1,6 @@
+__pycache__/
+*.pdf
+users.json
+.env
+.streamlit/
+passwords.txt
