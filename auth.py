@@ -216,133 +216,106 @@ def _render_stat_counters():
 
 def _render_feature_cards():
     st.markdown("""
-    <div class="showcase-grid">
-        <div class="showcase-card" style="--accent:#F97316">
-            <div class="sc-icon">&#9889;</div>
-            <div class="sc-title">Instant EDA</div>
-            <div class="sc-desc">10+ charts auto-generated in under 3 seconds</div>
-            <div class="sc-bar"><div class="sc-fill" style="width:92%;background:#F97316"></div></div>
-        </div>
-        <div class="showcase-card" style="--accent:#38BDF8">
-            <div class="sc-icon">&#129504;</div>
-            <div class="sc-title">AI-Powered Chat</div>
-            <div class="sc-desc">Ask natural language questions about your dataset</div>
-            <div class="sc-bar"><div class="sc-fill" style="width:85%;background:#38BDF8"></div></div>
-        </div>
-        <div class="showcase-card" style="--accent:#A78BFA">
-            <div class="sc-icon">&#128202;</div>
-            <div class="sc-title">Smart Visuals</div>
-            <div class="sc-desc">Interactive histograms, heatmaps, scatter plots</div>
-            <div class="sc-bar"><div class="sc-fill" style="width:78%;background:#A78BFA"></div></div>
-        </div>
-        <div class="showcase-card" style="--accent:#34D399">
-            <div class="sc-icon">&#128269;</div>
-            <div class="sc-title">Anomaly Detection</div>
-            <div class="sc-desc">Outliers and missing values flagged automatically</div>
-            <div class="sc-bar"><div class="sc-fill" style="width:88%;background:#34D399"></div></div>
-        </div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:0 auto 28px;max-width:900px;position:relative;z-index:1;">
+
+  <!-- CAPABILITIES -->
+  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
+    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#a78bfa;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);border-radius:20px;padding:3px 10px;">CAPABILITIES</span>
+    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 18px;">What Argus auto-detects</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(56,189,248,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">⊞</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Missing values &amp; duplicates</p><p style="color:#475569;font-size:0.76rem;margin:0;">flagged per column with severity</p></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(52,211,153,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">↗</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Outliers by IQR method</p><p style="color:#475569;font-size:0.76rem;margin:0;">count, % and affected columns</p></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">⏱</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Skewed distributions</p><p style="color:#475569;font-size:0.76rem;margin:0;">log-transform suggestions included</p></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(248,113,113,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">∿</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Strong correlations</p><p style="color:#475569;font-size:0.76rem;margin:0;">top pairs ranked by |r| value</p></div>
+      </div>
     </div>
-    <div class="live-widgets-row">
-        <div class="live-widget lw-counter">
-            <div class="lw-badge">&#9679; LIVE</div>
-            <div class="lw-main-num" id="lw-count">0</div>
-            <div class="lw-label">Datasets Analysed Today</div>
-            <div class="lw-sparkline">
-                <div class="spark-bar" style="height:30%;background:#F97316"></div>
-                <div class="spark-bar" style="height:55%;background:#F97316"></div>
-                <div class="spark-bar" style="height:42%;background:#F97316"></div>
-                <div class="spark-bar" style="height:70%;background:#F97316"></div>
-                <div class="spark-bar" style="height:50%;background:#F97316"></div>
-                <div class="spark-bar" style="height:88%;background:#FA8C3A"></div>
-                <div class="spark-bar" style="height:95%;background:#FA8C3A" id="spark-last"></div>
-            </div>
-        </div>
-        <div class="live-widget lw-donut">
-            <div class="lw-badge" style="background:rgba(56,189,248,0.15);color:#38BDF8;border-color:rgba(56,189,248,0.3)">&#9679; INSIGHT</div>
-            <div class="donut-wrap">
-                <svg viewBox="0 0 80 80" class="donut-svg">
-                    <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
-                    <circle cx="40" cy="40" r="32" fill="none" stroke="#38BDF8" stroke-width="10"
-                        stroke-dasharray="201 201" stroke-dashoffset="30"
-                        stroke-linecap="round" transform="rotate(-90 40 40)" class="donut-arc"/>
-                </svg>
-                <div class="donut-label">85%<br><span>AI Accuracy</span></div>
-            </div>
-        </div>
-        <div class="live-widget lw-feed">
-            <div class="lw-badge" style="background:rgba(167,139,250,0.15);color:#A78BFA;border-color:rgba(167,139,250,0.3)">&#9679; ACTIVITY</div>
-            <div class="feed-title">Recent Actions</div>
-            <ul class="feed-list" id="feed-list-auth">
-                <li class="feed-item"><span class="feed-dot" style="background:#F97316"></span>Correlation heatmap generated</li>
-                <li class="feed-item"><span class="feed-dot" style="background:#38BDF8"></span>Outlier detection complete</li>
-                <li class="feed-item"><span class="feed-dot" style="background:#A78BFA"></span>AI chat ready</li>
-                <li class="feed-item"><span class="feed-dot" style="background:#34D399"></span>Missing value scan done</li>
-            </ul>
-        </div>
-        <div class="live-widget lw-gauge">
-            <div class="lw-badge" style="background:rgba(52,211,153,0.15);color:#34D399;border-color:rgba(52,211,153,0.3)">&#9679; PERF</div>
-            <div class="gauge-wrap">
-                <div class="gauge-ring">
-                    <div class="gauge-inner">
-                        <span class="gauge-val">2.1s</span>
-                        <span class="gauge-sub">Avg. EDA Time</span>
-                    </div>
-                </div>
-            </div>
-            <div class="gauge-bars">
-                <div class="gb" style="--h:40%;--c:#34D399"></div>
-                <div class="gb" style="--h:65%;--c:#34D399"></div>
-                <div class="gb" style="--h:50%;--c:#34D399"></div>
-                <div class="gb" style="--h:80%;--c:#2DD4C0"></div>
-                <div class="gb" style="--h:35%;--c:#2DD4C0"></div>
-            </div>
-        </div>
+  </div>
+
+  <!-- COMPATIBILITY -->
+  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
+    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#34d399;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);border-radius:20px;padding:3px 10px;">COMPATIBILITY</span>
+    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 4px;">Works with any dataset</h3>
+    <p style="color:#475569;font-size:0.78rem;margin:0 0 18px;">Drop in your file and Argus figures out the rest</p>
+    <div style="display:flex;gap:10px;margin-bottom:18px;">
+      <div style="flex:1;background:#1a2340;border:1px solid #2d3a55;border-radius:10px;padding:12px;text-align:center;">
+        <p style="color:#38bdf8;font-weight:700;font-size:0.95rem;margin:0 0 2px;">.CSV</p><p style="color:#475569;font-size:0.68rem;margin:0;">any size</p>
+      </div>
+      <div style="flex:1;background:#1a2340;border:1px solid #2d3a55;border-radius:10px;padding:12px;text-align:center;">
+        <p style="color:#38bdf8;font-weight:700;font-size:0.95rem;margin:0 0 2px;">.XLSX</p><p style="color:#475569;font-size:0.68rem;margin:0;">multi-sheet</p>
+      </div>
+      <div style="flex:1;background:#1a2340;border:1px solid #2d3a55;border-radius:10px;padding:12px;text-align:center;">
+        <p style="color:#38bdf8;font-weight:700;font-size:0.95rem;margin:0 0 2px;">.JSON</p><p style="color:#475569;font-size:0.68rem;margin:0;">nested ok</p>
+      </div>
     </div>
+    <p style="color:#64748b;font-size:0.76rem;margin:0 0 10px;">Tested on domains:</p>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;">
+      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:#7dd3fc;">Healthcare</span>
+      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:#6ee7b7;">Retail &amp; Sales</span>
+      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#fdba74;">Finance</span>
+      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);color:#c4b5fd;">HR &amp; People</span>
+      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:#fca5a5;">IoT / Sensor</span>
+      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.25);color:#fde68a;">Marketing</span>
     </div>
-    """, unsafe_allow_html=True)
-    import streamlit.components.v1 as components
-    components.html("""
-    <script>
-    (function(){
-        var doc = window.parent.document;
-        var target = 1247;
-        var el = doc.getElementById('lw-count');
-        if(el){
-            var cur = 0, step = Math.ceil(target/80);
-            var t = setInterval(function(){
-                cur = Math.min(cur+step, target);
-                el.textContent = cur.toLocaleString();
-                if(cur>=target) clearInterval(t);
-            }, 20);
-            setInterval(function(){
-                var s = doc.getElementById('spark-last');
-                if(s){ s.style.height = Math.floor(80+Math.random()*18)+'%'; }
-            }, 1200);
-        }
-        var feedItems = [
-            {dot:'#F97316',text:'Correlation heatmap generated'},
-            {dot:'#38BDF8',text:'Outlier detection complete'},
-            {dot:'#A78BFA',text:'AI chat session started'},
-            {dot:'#34D399',text:'Missing value scan done'},
-            {dot:'#F97316',text:'Distribution chart rendered'},
-            {dot:'#38BDF8',text:'Data types classified'},
-            {dot:'#A78BFA',text:'Summary statistics ready'}
-        ];
-        var feedIdx = 4;
-        setInterval(function(){
-            var fl = doc.getElementById('feed-list-auth');
-            if(!fl) return;
-            var li = doc.createElement('li');
-            li.className='feed-item feed-new';
-            var f = feedItems[feedIdx%feedItems.length];
-            li.innerHTML='<span class="feed-dot" style="background:'+f.dot+'"></span>'+f.text;
-            fl.insertBefore(li,fl.firstChild);
-            if(fl.children.length>4) fl.removeChild(fl.lastChild);
-            feedIdx++;
-        }, 2500);
-    })();
-    </script>
-    """, height=0, width=0)
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
+    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#fb923c;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:20px;padding:3px 10px;">HOW IT WORKS</span>
+    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 18px;">From upload to insight in 4 steps</h3>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">1</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Upload your CSV or Excel</p><p style="color:#475569;font-size:0.76rem;margin:0;">No setup, no schema definition needed</p></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">2</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">AI reads &amp; summarises your data</p><p style="color:#475569;font-size:0.76rem;margin:0;">Domain, structure, quality — in plain English</p></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">3</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">10+ charts auto-generated</p><p style="color:#475569;font-size:0.76rem;margin:0;">Distributions, correlations, trends, outliers</p></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">4</div>
+        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Chat with your data</p><p style="color:#475569;font-size:0.76rem;margin:0;">Ask anything, get instant AI answers</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
+    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#f87171;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:20px;padding:3px 10px;">PREVIEW</span>
+    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 4px;">Sample AI insights</h3>
+    <p style="color:#475569;font-size:0.78rem;margin:0 0 18px;">The kind of descriptions Argus generates automatically</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="border-left:3px solid #7c3aed;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;padding:12px 14px;">
+        <p style="color:#64748b;font-size:0.7rem;margin:0 0 5px;">Age column — heart disease dataset</p>
+        <p style="color:#e2e8f0;font-size:0.82rem;font-weight:600;margin:0;">&ldquo;Roughly symmetric, mean 47.8 yrs. Most patients are 40&ndash;60. No missing values &mdash; clean and ready to use.&rdquo;</p>
+      </div>
+      <div style="border-left:3px solid #7c3aed;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;padding:12px 14px;">
+        <p style="color:#64748b;font-size:0.7rem;margin:0 0 5px;">Country column — retail dataset</p>
+        <p style="color:#e2e8f0;font-size:0.82rem;font-weight:600;margin:0;">&ldquo;UK dominates at 91% of records. 37 other countries share the rest &mdash; high cardinality, group rare ones.&rdquo;</p>
+      </div>
+      <div style="border-left:3px solid #7c3aed;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;padding:12px 14px;">
+        <p style="color:#64748b;font-size:0.7rem;margin:0 0 5px;">Salary column — HR dataset</p>
+        <p style="color:#e2e8f0;font-size:0.82rem;font-weight:600;margin:0;">&ldquo;Strongly right-skewed (skew=2.1). Most earn $40K&ndash;$70K but outliers up to $500K pull the mean. Consider log transform.&rdquo;</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+""", unsafe_allow_html=True)
 
 
 def _render_auth_form():
@@ -544,111 +517,6 @@ def _inject_css_and_canvas():
         box-shadow: 0 0 42px rgba(249,115,22,0.6) !important;
         transform: translateY(-2px) !important;
     }
-    /* ── Showcase grid (login page) */
-    .showcase-grid {
-        display: grid; grid-template-columns: repeat(4, 1fr);
-        gap: 14px; margin: 0 auto 20px; max-width: 900px;
-        position: relative; z-index: 1;
-    }
-    @media(max-width:900px){ .showcase-grid{grid-template-columns:1fr 1fr;} }
-    .showcase-card {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 18px; padding: 20px 16px;
-        transition: all 0.35s; position: relative; overflow: hidden;
-    }
-    .showcase-card:hover {
-        border-color: var(--accent); transform: translateY(-5px);
-        box-shadow: 0 10px 32px rgba(0,0,0,0.4);
-    }
-    .showcase-card::after {
-        content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
-        background: var(--accent); transform:scaleX(0); transform-origin:left;
-        transition:transform 0.35s;
-    }
-    .showcase-card:hover::after { transform:scaleX(1); }
-    .sc-icon   { font-size:1.8rem; margin-bottom:7px; }
-    .sc-title  { font-weight:700; color:#E2E8F0; font-size:0.9rem; margin-bottom:4px; }
-    .sc-desc   { font-size:0.73rem; color:#64748B; line-height:1.5; margin-bottom:11px; }
-    .sc-bar    { height:4px; background:rgba(255,255,255,0.07); border-radius:10px; }
-    .sc-fill   { height:4px; border-radius:10px;
-                 animation: fillBar 1.4s cubic-bezier(.4,0,.2,1) forwards; }
-    @keyframes fillBar { from{width:0!important} }
-    /* ── Live Widgets Row (login page) */
-    .live-widgets-row {
-        display: grid; grid-template-columns: repeat(4, 1fr);
-        gap: 14px; margin: 0 auto 24px; max-width: 900px;
-        position: relative; z-index: 1;
-    }
-    @media(max-width:900px){ .live-widgets-row{grid-template-columns:1fr 1fr;} }
-    .live-widget {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 18px; padding: 16px 14px;
-        animation: fadeUp 0.6s ease both;
-    }
-    .live-widget:hover {
-        border-color: rgba(249,115,22,0.3);
-        box-shadow: 0 8px 28px rgba(0,0,0,0.35);
-        transform: translateY(-3px); transition: all 0.3s;
-    }
-    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
-    .lw-badge {
-        display: inline-flex; align-items: center; gap: 5px;
-        font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em;
-        color: #F97316; background: rgba(249,115,22,0.12);
-        border: 1px solid rgba(249,115,22,0.3);
-        border-radius: 20px; padding: 2px 8px; margin-bottom: 10px;
-        animation: badgePulse 2s ease-in-out infinite;
-    }
-    @keyframes badgePulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
-    .lw-main-num { font-size:2.2rem; font-weight:800; color:#F97316; line-height:1; margin:4px 0 2px; }
-    .lw-label    { font-size:0.7rem; color:#64748B; margin-bottom:12px; }
-    .lw-sparkline{ display:flex; align-items:flex-end; gap:4px; height:32px; }
-    .spark-bar   { flex:1; border-radius:3px 3px 0 0; transition:height 0.6s ease; }
-    .donut-wrap  { position:relative; width:100px; height:100px; margin:4px auto 0; }
-    .donut-svg   { width:100%; height:100%; }
-    .donut-arc   { animation: spinArc 1.6s ease forwards; }
-    @keyframes spinArc { from{stroke-dashoffset:201} to{stroke-dashoffset:30} }
-    .donut-label {
-        position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-        text-align:center; font-weight:800; font-size:1rem; color:#38BDF8; line-height:1.2;
-    }
-    .donut-label span { font-size:0.6rem; color:#64748B; font-weight:500; }
-    .feed-title  { font-size:0.73rem; color:#94A3B8; font-weight:600; margin-bottom:8px; }
-    .feed-list   { list-style:none; margin:0; padding:0; }
-    .feed-item   {
-        display:flex; align-items:center; gap:7px;
-        font-size:0.7rem; color:#94A3B8; padding:4px 0;
-        border-bottom:1px solid rgba(255,255,255,0.05);
-    }
-    .feed-new  { animation: feedSlide 0.4s ease; }
-    @keyframes feedSlide { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:none} }
-    .feed-dot  { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-    .gauge-wrap { display:flex; justify-content:center; margin:4px 0 10px; }
-    .gauge-ring {
-        width:80px; height:80px; border-radius:50%;
-        background: conic-gradient(#34D399 0% 72%, rgba(255,255,255,0.06) 72% 100%);
-        display:flex; align-items:center; justify-content:center;
-        box-shadow:0 0 14px rgba(52,211,153,0.22);
-        animation: gaugeReveal 1.8s ease forwards;
-    }
-    @keyframes gaugeReveal {
-        from{background:conic-gradient(#34D399 0% 0%,rgba(255,255,255,0.06) 0% 100%)}
-        to  {background:conic-gradient(#34D399 0% 72%,rgba(255,255,255,0.06) 72% 100%)}
-    }
-    .gauge-inner {
-        width:57px; height:57px; border-radius:50%; background:#0A0F1E;
-        display:flex; flex-direction:column; align-items:center; justify-content:center;
-    }
-    .gauge-val { font-size:0.95rem; font-weight:800; color:#34D399; }
-    .gauge-sub { font-size:0.5rem; color:#475569; text-align:center; }
-    .gauge-bars { display:flex; align-items:flex-end; gap:4px; height:24px; margin-top:6px; }
-    .gb {
-        flex:1; height:var(--h); background:var(--c); border-radius:3px 3px 0 0; opacity:0.7;
-        animation: gbAnim 1.2s ease both;
-    }
-    @keyframes gbAnim { from{height:0} }
     .tos-note { font-size:0.72rem; color:#334155; text-align:center; margin-top:16px; }
     </style>
     <!-- Particle Canvas -->
