@@ -16,7 +16,11 @@ import warnings
 from univariate import uni_analyze_and_visualize
 #import bivariate_analysis
 warnings.filterwarnings("ignore")
-client = Groq(api_key="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")
+try:
+    from utils import get_groq_client
+    client = get_groq_client()
+except ImportError:
+    client = Groq()
 
 data, dataset_name, target_variable = input_file.load_data()
 cleaner = DatasetCleaning(data)

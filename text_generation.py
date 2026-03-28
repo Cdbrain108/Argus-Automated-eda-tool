@@ -9,7 +9,11 @@ import random
 import importlib
 import warnings
 warnings.filterwarnings("ignore")
-client = Groq(api_key="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")
+try:
+    from utils import get_groq_client
+    client = get_groq_client()
+except ImportError:
+    client = Groq()
 #from bivariate_analysis import get_analysis_results
 class AI:
     def __init__(self):

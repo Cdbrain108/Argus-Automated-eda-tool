@@ -4,20 +4,53 @@ Features: particle canvas, animated stat counters, floating feature cards, glowi
 """
 
 import streamlit as st
-import json, hashlib, os, re, time
+import hashlib, os, re, time
+import jwt
+from datetime import datetime, timedelta
+from pymongo import MongoClient
+from streamlit_cookies_controller import CookieController
 
-USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
+def get_cookie_controller():
+    if "cookie_controller" not in st.session_state:
+        st.session_state["cookie_controller"] = CookieController(key="cookies")
+    return st.session_state["cookie_controller"]
 
+@st.cache_resource
+def get_db_collection():
+    uri = st.secrets.get("MONGO_URI", "")
+    if not uri:
+        return None
+    try:
+        client = MongoClient(uri, serverSelectionTimeoutMS=2000)
+        return client["argus_db"]["users"]
+    except Exception as e:
+        print("MongoDB Auth Error:", e)
+        return None
 
-def _load_users() -> dict:
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "r") as f:
-            return json.load(f)
-    return {}
+def _mint_jwt(email: str, name: str) -> str:
+    secret = st.secrets.get("JWT_SECRET", "super-secret-fallback-key")
+    payload = {
+        "email": email,
+        "name": name,
+        "exp": datetime.utcnow() + timedelta(days=7)
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
 
-def _save_users(users: dict):
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=2)
+def authenticate_from_cookie():
+    cc = get_cookie_controller()
+    token = cc.get("argus_jwt")
+    if token:
+        secret = st.secrets.get("JWT_SECRET", "super-secret-fallback-key")
+        try:
+            decoded = jwt.decode(token, secret, algorithms=["HS256"])
+            st.session_state.logged_in = True
+            st.session_state.user_email = decoded["email"]
+            st.session_state.user_name = decoded["name"]
+        except Exception:
+            try:
+                cc.remove("argus_jwt")
+            except:
+                pass
 
 def _hash(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
@@ -340,13 +373,18 @@ def _render_auth_form():
 def _handle_login(email, pw):
     if not email or not pw:
         st.error("Please fill in all fields."); return
-    users = _load_users()
-    if email not in users:
+        
+    users_col = get_db_collection()
+    if users_col is None:
+        st.error("⚠️ Database not configured: `MONGO_URI` missing in Streamlit secrets. Auth disabled."); return
+        
+    user = users_col.find_one({"email": email})
+    if not user:
         st.error("No account found. Please sign up first."); return
-    if users[email]["password"] != _hash(pw):
+    if user.get("password") != _hash(pw):
         st.error("Incorrect password."); return
-    _set_session(users[email]["name"], email)
-    st.rerun()
+        
+    _set_session_and_cookie(user.get("name", "User"), email)
 
 def _handle_signup(name, email, pw):
     if not name or not email or not pw:
@@ -355,17 +393,43 @@ def _handle_signup(name, email, pw):
         st.error("Invalid email address."); return
     if len(pw) < 6:
         st.error("Password must be at least 6 characters."); return
-    users = _load_users()
-    if email in users:
+        
+    users_col = get_db_collection()
+    if users_col is None:
+        st.error("⚠️ Database not configured: `MONGO_URI` missing in Streamlit secrets. Auth disabled."); return
+        
+    if users_col.find_one({"email": email}):
         st.error("Account already exists. Please log in."); return
-    users[email] = {"name": name, "password": _hash(pw)}
-    _save_users(users)
+        
+    users_col.insert_one({
+        "name": name, 
+        "email": email, 
+        "password": _hash(pw), 
+        "created_at": datetime.utcnow()
+    })
+    
     st.success(f"Welcome aboard, {name}! 🎉")
-    _set_session(name, email)
-    time.sleep(0.7); st.rerun()
+    _set_session_and_cookie(name, email)
 
-def _set_session(name, email):
+def _set_session_and_cookie(name, email):
+    # Set the JWT token securely into cookies
+    token = _mint_jwt(email, name)
+    get_cookie_controller().set("argus_jwt", token)
+    
+    # Authenticate locally and delay rerun allowing cookie to inject 
     st.session_state.update(logged_in=True, user_name=name, user_email=email)
+    time.sleep(0.7)
+    st.rerun()
+
+def logout():
+    try:
+        get_cookie_controller().remove("argus_jwt")
+    except Exception:
+        pass
+    for k in list(st.session_state.keys()):
+        del st.session_state[k]
+    time.sleep(0.5)
+    st.rerun()
 
 
 # ── CSS + Canvas ───────────────────────────────────────────────────────────────

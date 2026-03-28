@@ -15,3 +15,6 @@ eli5
 PyMuPDF
 gdown
 validators
+pymongo
+PyJWT
+streamlit-cookies-controller

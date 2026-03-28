@@ -16,10 +16,21 @@ def get_groq_client():
         keys = st.secrets.get("GROQ_API_KEYS", [])
         if keys:
             return Groq(api_key=random.choice(keys))
+            
+        key = st.secrets.get("GROQ_API_KEY")
+        if key:
+            return Groq(api_key=key)
     except Exception:
         pass
-    # Fallback if secrets missing
-    return Groq(api_key="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")
+    
+    import os
+    env_key = os.environ.get("GROQ_API_KEY")
+    if env_key:
+        return Groq(api_key=env_key)
+
+    # Fallback if secrets and explicit env check missing
+    # Groq SDK will automatically look for GROQ_API_KEY in the environment
+    return Groq()
 
 # We will let other files call `get_groq_client()` directly instead of using a global `_client`
 # But for utils internally, we can define one for `chat_response` if needed, although

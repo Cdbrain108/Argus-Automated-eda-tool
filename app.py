@@ -12,14 +12,18 @@ except Exception:
     icon = "📊"
 
 st.set_page_config(
-    page_title="Argus – Automated EDA Tool",
+    page_title="Argus – An AI based Automated EDA Tool",
     page_icon=icon,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-from auth import show_auth_page
+from auth import show_auth_page, authenticate_from_cookie
 from home import show_home_page
+
+# Try to authenticate the user from a potential JWT cookie
+if not st.session_state.get("logged_in"):
+    authenticate_from_cookie()
 
 if not st.session_state.get("logged_in"):
     show_auth_page()

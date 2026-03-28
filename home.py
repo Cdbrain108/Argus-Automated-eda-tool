@@ -4,7 +4,7 @@ Combines: data overview, cleaning, univariate, bivariate, feature importance, AI
 Generated PDFs and images are displayed inline as scrollable content.
 """
 
-import os, base64, time, warnings
+import os, base64, time, warnings, json, re as _re
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -14,9 +14,179 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import load_file, run_eda, chat_response
+from utils import load_file, run_eda, chat_response, get_groq_client
+
+
+# ── Shared helpers ────────────────────────────────────────────────────────────
+
+def apply_dark_layout(fig):
+    """Apply consistent dark theme to all Plotly figures."""
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#9ca3af", size=12),
+        xaxis=dict(showgrid=False, color="#9ca3af"),
+        yaxis=dict(gridcolor="rgba(255,255,255,0.05)", color="#9ca3af"),
+        margin=dict(l=10, r=10, t=30, b=10),
+    )
+
+
+def groq_call(prompt: str, max_tokens: int = 300) -> str:
+    """Single centralised Groq API call with key rotation."""
+    client = get_groq_client()
+    resp = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=max_tokens,
+        temperature=0.3,
+        stream=False,
+    )
+    return resp.choices[0].message.content.strip()
+
+
+def show_ai_insight(prompt_text: str, cache_key: str):
+    """Show an AI insight block, cached in session_state['ai_cache']."""
+    if "ai_cache" not in st.session_state:
+        st.session_state["ai_cache"] = {}
+    if cache_key in st.session_state["ai_cache"]:
+        text = st.session_state["ai_cache"][cache_key]
+    else:
+        try:
+            text = groq_call(prompt_text, max_tokens=200)
+        except Exception:
+            text = "Analysis unavailable."
+        st.session_state["ai_cache"][cache_key] = text
+    st.markdown(
+        f'<div style="border-left:3px solid #7F77DD;padding:10px 16px;'
+        f'border-radius:0 8px 8px 0;background:rgba(127,119,221,0.08);'
+        f'font-size:13px;line-height:1.7;color:#9ca3af;margin-top:10px">'
+        f'{text}</div>',
+        unsafe_allow_html=True,
+    )
 
 warnings.filterwarnings("ignore")
+
+
+# ── dark_card helper ────────────────────────────────────────────────────────────
+
+def dark_card(content_html, badge_text=None, badge_color=None):
+    badge_html = ""
+    if badge_text:
+        badge_html = (
+            f'<span style="display:inline-flex;align-items:center;'
+            f'font-size:14px;padding:3px 8px;border-radius:20px;font-weight:600;'
+            f'letter-spacing:.04em;background:{badge_color}22;'
+            f'color:{badge_color};margin-bottom:8px">{badge_text}</span><br>'
+        )
+    return (
+        f'<div style="background:#1a1f2e;border:1px solid #2d3748;'
+        f'border-radius:14px;padding:18px 20px;margin-bottom:12px;'
+        f'min-height:200px">'
+        f'{badge_html}{content_html}'
+        f'</div>'
+    )
+
+
+# ── compute_all_widgets (cached per-upload) ──────────────────────────────────────
+
+@st.cache_data(show_spinner=False)
+def compute_all_widgets(df_json_hash: str, df_json: str) -> dict:
+    """Compute all Overview widget data once and cache by dataframe hash."""
+    import hashlib
+    try:
+        import scipy.stats as scipy_stats
+        _has_scipy = True
+    except ImportError:
+        _has_scipy = False
+
+    df = pd.read_json(df_json)
+    results = {}
+
+    # --- health score ---
+    missing_penalty = min(40, round(df.isnull().mean().mean() * 100 * 2))
+    dup_penalty = min(20, round(df.duplicated().sum() / max(len(df), 1) * 100 * 2))
+    num_cols = df.select_dtypes(include="number").columns.tolist()
+    outlier_penalties = []
+    for col in num_cols:
+        q1, q3 = df[col].quantile(0.25), df[col].quantile(0.75)
+        iqr = q3 - q1
+        if iqr > 0:
+            pct = ((df[col] < q1 - 1.5 * iqr) | (df[col] > q3 + 1.5 * iqr)).mean() * 100
+            outlier_penalties.append(pct)
+    outlier_penalty = (
+        min(40, round(sum(outlier_penalties) / len(outlier_penalties)))
+        if outlier_penalties else 0
+    )
+    results["health_score"]     = max(0, 100 - missing_penalty - dup_penalty - outlier_penalty)
+    results["missing_penalty"]  = missing_penalty
+    results["dup_penalty"]      = dup_penalty
+    results["outlier_penalty"]  = outlier_penalty
+
+    # --- column breakdown ---
+    results["n_numeric"]      = len(df.select_dtypes(include="number").columns)
+    results["n_categorical"]  = len(df.select_dtypes(include=["object", "category"]).columns)
+    results["n_datetime"]     = len(df.select_dtypes(include="datetime").columns)
+    results["n_cols"]         = len(df.columns)
+    results["n_rows"]         = len(df)
+
+    # --- missing heatmap ---
+    results["missing_pct_per_col"] = (df.isnull().mean() * 100).round(1).to_dict()
+
+    # --- skewness ---
+    skew_scores = {}
+    for col in num_cols:
+        clean = df[col].dropna()
+        if len(clean) > 10:
+            try:
+                val = float(scipy_stats.skew(clean)) if _has_scipy else float(clean.skew())
+                skew_scores[col] = round(val, 2)
+            except Exception:
+                pass
+    results["skew_scores"] = dict(
+        sorted(skew_scores.items(), key=lambda x: abs(x[1]), reverse=True)[:5]
+    )
+
+    # --- outliers ---
+    outlier_details = {}
+    for col in num_cols:
+        q1, q3 = df[col].quantile(0.25), df[col].quantile(0.75)
+        iqr = q3 - q1
+        count = int(((df[col] < q1 - 1.5 * iqr) | (df[col] > q3 + 1.5 * iqr)).sum())
+        if count > 0:
+            outlier_details[col] = count
+    results["outlier_details"] = dict(
+        sorted(outlier_details.items(), key=lambda x: x[1], reverse=True)
+    )
+    if num_cols:
+        mask = df[num_cols].apply(
+            lambda c: (
+                (c < c.quantile(0.25) - 1.5 * (c.quantile(0.75) - c.quantile(0.25))) |
+                (c > c.quantile(0.75) + 1.5 * (c.quantile(0.75) - c.quantile(0.25)))
+            )
+        ).any(axis=1)
+        results["total_outlier_rows"] = int(mask.sum())
+        results["outlier_pct"]        = round(mask.mean() * 100, 1)
+    else:
+        results["total_outlier_rows"] = 0
+        results["outlier_pct"]        = 0.0
+    results["cols_affected"] = len(outlier_details)
+
+    # --- correlations ---
+    results["top_pairs"] = []
+    if len(num_cols) >= 2:
+        try:
+            corr = df[num_cols].corr()
+            pairs = []
+            for i in range(len(num_cols)):
+                for j in range(i + 1, len(num_cols)):
+                    r = corr.iloc[i, j]
+                    if not pd.isna(r):
+                        pairs.append((num_cols[i], num_cols[j], round(float(r), 2)))
+            results["top_pairs"] = sorted(pairs, key=lambda x: abs(x[2]), reverse=True)[:5]
+        except Exception:
+            pass
+
+    return results
 
 # ── Optional backend module imports ───────────────────────────────────────────
 try:
@@ -119,6 +289,11 @@ def _render_upload_widget():
                     ),
                 }],
             )
+            # ── Pre-compute all Overview widget data once ──
+            import hashlib
+            df_json = df.to_json()
+            df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
+            st.session_state["w"] = compute_all_widgets(df_hash, df_json)
         st.rerun()
 
 
@@ -158,58 +333,247 @@ def _render_main_tabs():
 # ── Tab 1 · Overview ──────────────────────────────────────────────────────────
 
 def _render_overview_tab(df: pd.DataFrame, eda: dict):
-    c1, c2, c3, c4 = st.columns(4)
-    _metric_card(c1, "🗂", "Rows",           f"{eda['rows']:,}",                        "records")
-    _metric_card(c2, "📐", "Columns",        str(eda["columns"]),                       "features")
-    _metric_card(c3, "⚠️", "Missing Values", f"{eda['missing_values']:,}",              "cells")
-    _metric_card(c4, "🏷", "Data Types",     str(len(set(eda["dtypes"].values()))),      "unique")
+    w = st.session_state.get("w", {})
+    if not w:
+        st.info("Upload a file first")
+        return
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    col_l, col_r = st.columns(2)
+    col_a, col_b = st.columns(2)
 
-    with col_l:
-        dtype_counts = pd.Series(eda["dtypes"]).value_counts()
-        fig = px.pie(
-            values=dtype_counts.values, names=dtype_counts.index,
-            title="Column Data Types",
-            color_discrete_sequence=["#F97316","#38BDF8","#A78BFA","#34D399","#FCD34D"],
-            hole=0.45,
-        )
-        fig.update_layout(**_chart_layout())
-        fig.update_traces(textfont_size=12, pull=[0.05] * len(dtype_counts))
-        st.plotly_chart(fig, use_container_width=True)
+    # ──────────────────────── LEFT COLUMN ────────────────────────
+    with col_a:
 
-    with col_r:
-        missing_s = df.isnull().sum()
-        missing_s = missing_s[missing_s > 0]
-        if not missing_s.empty:
-            fig = px.bar(
-                x=missing_s.index, y=missing_s.values,
-                title="Missing Values per Column",
-                labels={"x": "Column", "y": "Missing Count"},
-                color=missing_s.values,
-                color_continuous_scale=["#F97316", "#EF4444"],
+        # ── WIDGET 1: Health Score ──────────────────────────────────────────
+        score = w["health_score"]
+        score_color = "#1D9E75" if score >= 75 else "#EF9F27" if score >= 50 else "#E24B4A"
+        dash = round(score / 100 * 176)
+
+        def penalty_bar(label, value, max_val=40):
+            pct = min(100, round(value / max_val * 100))
+            bar_color = "#1D9E75" if value == 0 else "#EF9F27" if value < 20 else "#E24B4A"
+            return (
+                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">'
+                f'<span style="font-size:14px;color:#9ca3af;min-width:100px">{label}</span>'
+                f'<div style="flex:1;height:8px;border-radius:4px;background:#2d3748">'
+                f'<div style="width:{pct}%;height:100%;border-radius:4px;background:{bar_color}"></div></div>'
+                f'<span style="font-size:14px;color:{bar_color};min-width:30px;text-align:right">-{value}</span>'
+                f'</div>'
             )
-            fig.update_layout(**_chart_layout())
-            st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown(dark_card(
+            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">'
+            f'<div>'
+            f'<p style="font-size:18px;font-weight:600;color:#fff;margin:0">Dataset Health Score</p>'
+            f'<p style="font-size:14px;color:#6b7280;margin:6px 0 0">auto-computed on upload</p>'
+            f'</div>'
+            f'<div style="position:relative;width:90px;height:90px">'
+            f'<svg width="90" height="90" viewBox="0 0 72 72">'
+            f'<circle cx="36" cy="36" r="28" fill="none" stroke="#2d3748" stroke-width="7"/>'
+            f'<circle cx="36" cy="36" r="28" fill="none" stroke="{score_color}" stroke-width="7"'
+            f' stroke-dasharray="{dash} 176" stroke-dashoffset="44" stroke-linecap="round"'
+            f' transform="rotate(-90 36 36)"/>'
+            f'</svg>'
+            f'<div style="position:absolute;inset:0;display:flex;flex-direction:column;'
+            f'align-items:center;justify-content:center;font-size:24px;font-weight:700;'
+            f'color:{score_color}">{score}</div>'
+            f'</div></div>'
+            + penalty_bar("Missing",   w["missing_penalty"])
+            + penalty_bar("Duplicates", w["dup_penalty"], 20)
+            + penalty_bar("Outliers",  w["outlier_penalty"])
+            + '<p style="font-size:13px;color:#6b7280;margin:12px 0 0;font-style:italic">'
+              'Score = 100 minus missing, duplicate and outlier penalties</p>',
+            "HEALTH", "#1D9E75"
+        ), unsafe_allow_html=True)
+
+        # ── WIDGET 3: Missing Value Heatmap ──────────────────────────────────
+        missing_dict = w["missing_pct_per_col"]
+
+        def miss_color(pct):
+            if pct == 0:    return "#1D9E75"
+            elif pct < 10:  return "#FAC775"
+            elif pct < 50:  return "#EF9F27"
+            else:           return "#E24B4A"
+
+        squares = "".join([
+            f'<div style="display:flex;flex-direction:column;align-items:center;gap:4px" title="{col} — {pct}% missing">'
+            f'<div style="width:36px;height:36px;border-radius:6px;background:{miss_color(pct)}"></div>'
+            f'<span style="font-size:12px;color:#6b7280">{col[:5]}</span>'
+            f'</div>'
+            for col, pct in missing_dict.items()
+        ])
+
+        all_clean = all(v == 0 for v in missing_dict.values())
+        if all_clean:
+            chart_html = (
+                '<div style="display:flex;align-items:center;justify-content:center;'
+                'height:90px;font-size:16px;color:#1D9E75">All columns are clean — no missing values</div>'
+            )
         else:
-            st.markdown('<div class="no-missing">✅ No missing values found!</div>', unsafe_allow_html=True)
+            chart_html = f'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">{squares}</div>'
 
-    num_cols = df.select_dtypes(include="number").columns.tolist()
-    if num_cols:
-        st.markdown('<div class="section-title" style="margin-top:8px">📊 Numeric Distributions</div>', unsafe_allow_html=True)
-        _render_numeric_distribution(df)
+        legend = (
+            '<div style="display:flex;gap:12px;align-items:center;margin-top:10px">'
+            '<span style="font-size:13px;color:#6b7280">Legend:</span>'
+            '<span style="font-size:13px;color:#1D9E75"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#1D9E75;margin-right:4px"></span>Clean</span>'
+            '<span style="font-size:13px;color:#FAC775"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#FAC775;margin-right:4px"></span>&lt;10%</span>'
+            '<span style="font-size:13px;color:#EF9F27"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#EF9F27;margin-right:4px"></span>10-50%</span>'
+            '<span style="font-size:13px;color:#E24B4A"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#E24B4A;margin-right:4px"></span>&gt;50%</span>'
+            '</div>'
+        )
 
-    if len(num_cols) > 1:
-        st.markdown('<div class="section-title" style="margin-top:8px">🔥 Correlation Heatmap</div>', unsafe_allow_html=True)
-        corr = df[num_cols].corr().round(2)
-        fig  = go.Figure(data=go.Heatmap(
-            z=corr.values, x=corr.columns, y=corr.index,
-            colorscale=[[0, "#1E3A5F"], [0.5, "#0A0F1E"], [1, "#F97316"]],
-            zmid=0, text=corr.values, texttemplate="%{text}", textfont_size=10,
-        ))
-        fig.update_layout(title="Correlation Heatmap", **_chart_layout(), height=420)
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown(dark_card(
+            '<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Missing Value Map</p>'
+            '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">per-column severity at a glance</p>'
+            + chart_html + legend,
+            "QUALITY", "#E24B4A"
+        ), unsafe_allow_html=True)
+
+        # ── WIDGET 5: Outlier Summary ─────────────────────────────────────────
+        od = w["outlier_details"]
+        top5_outliers = list(od.items())[:5]
+
+        def out_color(count, total):
+            pct = count / max(total, 1) * 100
+            return "#E24B4A" if pct > 20 else "#EF9F27" if pct > 10 else "#FAC775"
+
+        rows_html = (
+            "".join([
+                f'<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px">'
+                f'<span style="color:#9ca3af">{col}</span>'
+                f'<span style="color:{out_color(cnt, w["n_rows"])}"> {cnt:,} outliers</span>'
+                f'</div>'
+                for col, cnt in top5_outliers
+            ])
+            if top5_outliers
+            else '<p style="font-size:15px;color:#1D9E75;margin:0">No outliers detected</p>'
+        )
+
+        st.markdown(dark_card(
+            '<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Outlier Detection</p>'
+            '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">IQR method across all numeric columns</p>'
+            '<div style="display:flex;gap:12px;margin-bottom:16px">'
+            f'<div style="flex:1;background:#E24B4A11;border:1px solid #E24B4A33;border-radius:8px;padding:14px;text-align:center">'
+            f'<p style="font-size:28px;font-weight:700;color:#E24B4A;margin:0">{w["total_outlier_rows"]:,}</p>'
+            f'<p style="font-size:14px;color:#6b7280;margin:4px 0 0">Outlier rows</p></div>'
+            f'<div style="flex:1;background:#EF9F2711;border:1px solid #EF9F2733;border-radius:8px;padding:14px;text-align:center">'
+            f'<p style="font-size:28px;font-weight:700;color:#EF9F27;margin:0">{w["outlier_pct"]}%</p>'
+            f'<p style="font-size:14px;color:#6b7280;margin:4px 0 0">Of dataset</p></div>'
+            f'<div style="flex:1;background:#7F77DD11;border:1px solid #7F77DD33;border-radius:8px;padding:14px;text-align:center">'
+            f'<p style="font-size:28px;font-weight:700;color:#7F77DD;margin:0">{w["cols_affected"]}</p>'
+            f'<p style="font-size:14px;color:#6b7280;margin:4px 0 0">Cols affected</p></div>'
+            '</div>'
+            + rows_html,
+            "OUTLIERS", "#E24B4A"
+        ), unsafe_allow_html=True)
+
+    # ─────────────────────── RIGHT COLUMN ───────────────────────
+    with col_b:
+
+        # ── WIDGET 2: Column Breakdown ──────────────────────────────────────
+        nn = w["n_numeric"]; nc2 = w["n_categorical"]; nd = w["n_datetime"]
+        total = w["n_cols"]
+        pn  = round(nn  / max(total, 1) * 100)
+        pc2 = round(nc2 / max(total, 1) * 100)
+        pd_ = round(nd  / max(total, 1) * 100)
+
+        st.markdown(dark_card(
+            '<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 16px">Column Breakdown</p>'
+            '<div style="display:flex;gap:10px;margin-bottom:16px">'
+            f'<div style="flex:1;background:#7F77DD22;border:1px solid #7F77DD44;border-radius:8px;padding:16px;text-align:center">'
+            f'<p style="font-size:32px;font-weight:700;color:#7F77DD;margin:0">{nn}</p>'
+            f'<p style="font-size:14px;color:#6b7280;margin:6px 0 0">Numeric</p></div>'
+            f'<div style="flex:1;background:#1D9E7522;border:1px solid #1D9E7544;border-radius:8px;padding:16px;text-align:center">'
+            f'<p style="font-size:32px;font-weight:700;color:#1D9E75;margin:0">{nc2}</p>'
+            f'<p style="font-size:14px;color:#6b7280;margin:6px 0 0">Categorical</p></div>'
+            f'<div style="flex:1;background:#378ADD22;border:1px solid #378ADD44;border-radius:8px;padding:16px;text-align:center">'
+            f'<p style="font-size:32px;font-weight:700;color:#378ADD;margin:0">{nd}</p>'
+            f'<p style="font-size:14px;color:#6b7280;margin:6px 0 0">Datetime</p></div>'
+            '</div>'
+            f'<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;gap:3px">'
+            f'<div style="flex:{max(nn,1)};background:#7F77DD;border-radius:6px 0 0 6px"></div>'
+            f'<div style="flex:{max(nc2,1)};background:#1D9E75"></div>'
+            f'<div style="flex:{max(nd,1)};background:#378ADD;border-radius:0 6px 6px 0"></div>'
+            f'</div>'
+            f'<div style="display:flex;gap:16px;margin-top:10px">'
+            f'<span style="font-size:14px;color:#7F77DD">{pn}% numeric</span>'
+            f'<span style="font-size:14px;color:#1D9E75">{pc2}% categorical</span>'
+            f'<span style="font-size:14px;color:#378ADD">{pd_}% datetime</span>'
+            f'</div>'
+            '<div style="margin-top:16px;padding-top:16px;border-top:1px solid #2d3748">'
+            f'<div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:8px">'
+            f'<span style="color:#9ca3af">Total rows</span>'
+            f'<span style="color:#fff;font-weight:500">{w["n_rows"]:,}</span></div>'
+            f'<div style="display:flex;justify-content:space-between;font-size:15px">'
+            f'<span style="color:#9ca3af">Total columns</span>'
+            f'<span style="color:#fff;font-weight:500">{total}</span></div>'
+            '</div>',
+            "STRUCTURE", "#7F77DD"
+        ), unsafe_allow_html=True)
+
+        # ── WIDGET 4: Most Skewed Columns ────────────────────────────────────
+        skew_dict = w.get("skew_scores", {})
+
+        def skew_bar(col, val):
+            width = min(int(abs(val) / 3 * 100), 100)
+            bc = "#E24B4A" if abs(val) > 1 else "#EF9F27" if abs(val) > 0.5 else "#1D9E75"
+            direction = "right" if val > 0 else "left" if val < 0 else "ok"
+            return (
+                f'<div style="margin-bottom:12px">'
+                f'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+                f'<span style="font-size:14px;color:#9ca3af">{col}</span>'
+                f'<div style="display:flex;gap:10px">'
+                f'<span style="font-size:14px;color:{bc}">{val}</span>'
+                f'<span style="font-size:13px;color:#6b7280;min-width:32px">{direction}</span>'
+                f'</div></div>'
+                f'<div style="height:8px;border-radius:4px;background:#2d3748">'
+                f'<div style="width:{width}%;height:100%;border-radius:4px;background:{bc}"></div></div>'
+                f'</div>'
+            )
+
+        skew_rows = (
+            "".join([skew_bar(c, v) for c, v in skew_dict.items()])
+            if skew_dict
+            else '<p style="font-size:15px;color:#6b7280">No numeric columns found</p>'
+        )
+
+        st.markdown(dark_card(
+            '<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Most Skewed Columns</p>'
+            '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">needs attention before modelling</p>'
+            + skew_rows +
+            '<p style="font-size:13px;color:#6b7280;margin:12px 0 0;font-style:italic">Skewness &gt;1 = consider log transform</p>',
+            "DISTRIBUTION", "#EF9F27"
+        ), unsafe_allow_html=True)
+
+        # ── WIDGET 6: Strongest Correlations ─────────────────────────────────
+        pairs = w.get("top_pairs", [])
+
+        def corr_bar(col1, col2, r):
+            width = int(abs(r) * 100)
+            bc = "#E24B4A" if abs(r) > 0.7 else "#EF9F27" if abs(r) > 0.4 else "#1D9E75"
+            return (
+                f'<div style="margin-bottom:12px">'
+                f'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+                f'<span style="font-size:14px;color:#9ca3af">{col1} ↔ {col2}</span>'
+                f'<span style="font-size:14px;color:{bc}">r = {r}</span>'
+                f'</div>'
+                f'<div style="height:8px;border-radius:4px;background:#2d3748">'
+                f'<div style="width:{width}%;height:100%;border-radius:4px;background:{bc}"></div></div>'
+                f'</div>'
+            )
+
+        corr_rows = (
+            "".join([corr_bar(c1, c2, r) for c1, c2, r in pairs])
+            if pairs
+            else '<p style="font-size:15px;color:#6b7280">Need 2+ numeric columns</p>'
+        )
+
+        st.markdown(dark_card(
+            '<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Strongest Correlations</p>'
+            '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">top pairs by absolute r value</p>'
+            + corr_rows +
+            '<p style="font-size:13px;color:#6b7280;margin:12px 0 0;font-style:italic">|r| &gt; 0.7 = strong &nbsp;|&nbsp; 0.4–0.7 = moderate</p>',
+            "CORRELATION", "#378ADD"
+        ), unsafe_allow_html=True)
 
 
 # ── Tab 2 · Data Cleaning ─────────────────────────────────────────────────────
@@ -733,9 +1097,6 @@ def _render_data_summary(df: pd.DataFrame):
     # ── Smart Dataset Dashboard (inserted right after AI summary) ────────────
     _render_smart_dashboard(df)
 
-    # ── CHANGE 1: Smart Categorical Insights ─────────────────────────────────
-    _render_categorical_insights(df)
-
 
 # ── Smart Dataset Dashboard ───────────────────────────────────────────────────
 
@@ -947,74 +1308,132 @@ def _fallback_cards(df: pd.DataFrame) -> list:
 
 def _render_smart_dashboard(df: pd.DataFrame):
     """
-    Render a domain-agnostic 'Dataset At a Glance' dashboard.
-    Strategy:
-      1. Python pre-computes a full per-column stats profile.
-      2. The entire profile is sent to Groq in ONE call.
-      3. Groq decides what 5-6 metrics are most meaningful for THIS dataset
-         — no role mapping, no slot names, no keywords.
-      4. We display exactly what Groq returns as metric cards.
+    CHANGE 1 — Enhanced 'Dataset At a Glance' with AI-generated metric cards
+    rendered in a 3-column responsive HTML grid, with hover tooltips.
     """
-    import json as _json
-
     filename = st.session_state.get("file_name", "dataset")
     n_rows   = len(df)
     n_cols   = len(df.columns)
+    cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
 
-    # ── Step 1: Pre-compute per-column profile ────────────────────────────────
-    profile      = _build_col_profile(df)
-    profile_json = _json.dumps(profile, ensure_ascii=False)
-    cache_key    = f"{filename}_glance_{','.join(df.columns)}_{n_rows}"
+    glance_cache_key = f"{filename}_glance_v2_{','.join(df.columns)}_{n_rows}"
 
-    # ── Step 2: Ask Groq to generate insight cards ────────────────────────────
+    def _get_cards():
+        """Try Groq for smart cards, fall back to hardcoded logic."""
+        if glance_cache_key in st.session_state.get("ai_cache", {}):
+            cached = st.session_state["ai_cache"][glance_cache_key]
+            try:
+                return json.loads(cached)
+            except Exception:
+                pass
+
+        # Build a compact numeric summary
+        try:
+            numeric_summary = df.describe().round(2).to_dict()
+        except Exception:
+            numeric_summary = {}
+        try:
+            cat_summary = {
+                col: df[col].value_counts().head(3).to_dict()
+                for col in cat_cols[:8]
+            }
+        except Exception:
+            cat_summary = {}
+
+        col_dtypes = {str(c): str(t) for c, t in df.dtypes.items()}
+
+        groq_prompt = f"""You are a data analyst. Given this dataset profile, choose the 6 most
+interesting metrics to highlight on a summary dashboard.
+
+Dataset profile:
+  filename: {filename}
+  shape: {n_rows} rows x {n_cols} columns
+  columns and dtypes: {col_dtypes}
+  numeric summary: {json.dumps(numeric_summary)}
+  categorical top values: {json.dumps(cat_summary)}
+
+For each of the 6 metrics, return a JSON array like this:
+[
+  {{
+    "label": "short label (3-5 words max)",
+    "value": "the actual value as a string",
+    "sublabel": "1 short context phrase (e.g. 'across all records', 'highest recorded', '22.1% of records')",
+    "reason": "why this metric is interesting (1 sentence, used as tooltip)"
+  }}
+]
+
+Rules:
+- Always include Total Rows as the first card
+- Pick a mix: at least 1 from numeric (max, mean, or unique count),
+  at least 1 from categorical (most common value + its frequency),
+  and 1 data quality metric (missing values or duplicate count)
+- For categorical most-common: value should be the top value, sublabel should be "X% of records"
+- For numeric max/min: sublabel = "highest recorded" or "lowest recorded"
+- Be specific to THIS dataset's domain (medical, retail, financial etc)
+- Return ONLY valid JSON. No explanation, no markdown, no extra text."""
+
+        try:
+            raw = groq_call(groq_prompt, max_tokens=700)
+            raw = raw.strip("`\n")
+            if raw.startswith("json"):
+                raw = raw[4:].strip()
+            parsed = json.loads(raw)
+            if isinstance(parsed, list) and len(parsed) > 0:
+                if "ai_cache" not in st.session_state:
+                    st.session_state["ai_cache"] = {}
+                st.session_state["ai_cache"][glance_cache_key] = json.dumps(parsed)
+                return parsed
+        except Exception:
+            pass
+
+        # Hardcoded fallback
+        miss_total = int(df.isnull().sum().sum())
+        dupe_count = int(df.duplicated().sum())
+        num_count  = len(df.select_dtypes(include="number").columns)
+        cat_count  = len(df.select_dtypes(include=["object","category"]).columns)
+        fallback = [
+            {"label": "Total Rows",          "value": f"{n_rows:,}",         "sublabel": "entire dataset",        "reason": "Total number of records in the dataset."},
+            {"label": "Total Columns",        "value": str(n_cols),            "sublabel": "features",              "reason": "Total number of columns / features."},
+            {"label": "Missing Values",       "value": f"{miss_total:,}",      "sublabel": "total null cells",      "reason": "Total count of null cells across the dataset."},
+            {"label": "Duplicate Rows",       "value": str(dupe_count),        "sublabel": "exact duplicates",      "reason": "Exact duplicate row count that should be removed."},
+            {"label": "Numeric Columns",      "value": str(num_count),         "sublabel": "quantitative features", "reason": "Count of columns with numeric values."},
+            {"label": "Categorical Columns",  "value": str(cat_count),         "sublabel": "text features",         "reason": "Count of columns with text/categorical values."},
+        ]
+        return fallback
+
+    # ── Generate cards ────────────────────────────────────────────────────────
+    st.markdown("### 📊 Dataset At a Glance")
     with st.spinner("Generating dataset overview…"):
-        cards = _ai_glance_cards(cache_key, profile_json, n_rows, n_cols)
+        cards = _get_cards()
 
-    # ── Step 3: Fallback if Groq fails ───────────────────────────────────────
-    if not cards:
-        cards = _fallback_cards(df)
+    # ── Build 3-column HTML grid ──────────────────────────────────────────────
+    card_html_parts = []
+    for card in cards:
+        label    = card.get("label", "")
+        value    = card.get("value", "")
+        sublabel = card.get("sublabel", card.get("sub", ""))
+        reason   = card.get("reason", "")
+        card_html_parts.append(
+            f'<div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;'
+            f'padding:20px 24px;cursor:default;transition:border-color 0.2s;position:relative" '
+            f'title="{reason}">'
+            f'<p style="color:#9ca3af;font-size:13px;margin:0 0 8px;font-weight:400">{label}</p>'
+            f'<p style="color:#ffffff;font-size:28px;font-weight:700;margin:0 0 6px;letter-spacing:-0.5px">{value}</p>'
+            f'<p style="color:#6b7280;font-size:12px;margin:0">{sublabel}</p>'
+            f'</div>'
+        )
 
-    # ── Step 4: Section header ────────────────────────────────────────────────
-    st.markdown(
-        '<div class="section-title" style="margin-top:28px;margin-bottom:4px">'
-        '\U0001f4ca Dataset At a Glance</div>',
-        unsafe_allow_html=True,
+    full_html = (
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">'
+        + "".join(card_html_parts)
+        + "</div>"
     )
-
-    # ── Step 5: Render cards in rows of 4 ────────────────────────────────────
-    CARD_CSS = (
-        "background:rgba(255,255,255,0.03);"
-        "border:1px solid rgba(255,255,255,0.08);"
-        "border-radius:14px;"
-        "padding:18px 16px 14px;"
-        "min-height:90px;"
-    )
-    LABEL_CSS = "font-size:0.72rem;color:#94A3B8;letter-spacing:0.04em;margin-bottom:4px;"
-    VALUE_CSS = "font-size:1.75rem;font-weight:800;color:#F1F5F9;line-height:1.1;margin-bottom:4px;"
-    SUB_CSS   = "font-size:0.72rem;color:#64748B;"
-
-    chunk = 4
-    for i in range(0, len(cards), chunk):
-        row  = cards[i: i + chunk]
-        grid = st.columns(len(row))
-        for col_obj, card in zip(grid, row):
-            with col_obj:
-                st.markdown(
-                    f'<div style="{CARD_CSS}">'
-                    f'<div style="{LABEL_CSS}">{card["label"]}</div>'
-                    f'<div style="{VALUE_CSS}">{card["value"]}</div>'
-                    f'<div style="{SUB_CSS}">{card["sub"]}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-        if i + chunk < len(cards):
-            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-
-    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+    st.markdown(full_html, unsafe_allow_html=True)
+    st.caption("Hover over any card for insight")
 
 
 
-# ── Numeric Distribution (CHANGE 2) ─────────────────────────────────────────
+# ── Numeric Distribution ──────────────────────────────────────────────────────
 
 @st.cache_data(show_spinner=False)
 def _groq_numeric_description(cache_key: str, column: str, dataset_context: str,
@@ -1377,26 +1796,74 @@ def _render_categorical_insights(df: pd.DataFrame):
         title = _groq_cat_title(cache_key, col, top_10_str, context)
     st.subheader(title)
 
-    # ── 7. Bar chart ──────────────────────────────────────────────────────────
+    # ── 7. Bar chart (CHANGE 3 — fixed y-axis labels) ────────────────────────
     plot_data = vc if cardinality <= 15 else top10
     if cardinality > 15:
         st.caption(f"Showing top 10 of {cardinality} unique values")
 
+    top10_df = pd.DataFrame({
+        "value": plot_data.index.astype(str),
+        "count": plot_data.values,
+    })
+
+    # Groq-generated axis labels (CHANGE 3)
+    ax_cache_key = f"{filename}_{col}_axlabels"
+    if ax_cache_key not in st.session_state.get("ai_cache", {}):
+        try:
+            y_label_prompt = (
+                f"Write a 2-4 word y-axis label for a bar chart where each bar represents "
+                f"a unique value of the column '{col}' in a dataset about '{context}'. "
+                "Examples: col='country' → 'Country', col='chol' → 'Cholesterol Level', "
+                "col='product_category' → 'Product Category'. Return ONLY the label. Nothing else."
+            )
+            x_label_prompt = (
+                f"Write a 2-4 word x-axis label for a bar chart counting occurrences of '{col}' "
+                f"values in a dataset about '{context}'. "
+                "Examples: col='country' → 'Number of Records', col='chol' → 'Patient Count', "
+                "col='diagnosis' → 'Case Count'. Return ONLY the label text. Nothing else."
+            )
+            y_label = groq_call(y_label_prompt, max_tokens=15).strip().strip('"')
+            x_label = groq_call(x_label_prompt, max_tokens=15).strip().strip('"')
+        except Exception:
+            y_label = col.replace("_", " ").title()
+            x_label = "Count"
+        if "ai_cache" not in st.session_state: st.session_state["ai_cache"] = {}
+        st.session_state["ai_cache"][ax_cache_key] = json.dumps({"y": y_label, "x": x_label})
+    else:
+        try:
+            ldata = json.loads(st.session_state["ai_cache"][ax_cache_key])
+            y_label = ldata.get("y", col.replace("_", " ").title())
+            x_label = ldata.get("x", "Count")
+        except Exception:
+            y_label = col.replace("_", " ").title()
+            x_label = "Count"
+
     fig = px.bar(
-        x=plot_data.values,
-        y=plot_data.index.astype(str),
-        orientation="h",
-        labels={"x": "Count", "y": col},
+        top10_df, x="count", y="value", orientation="h",
+        labels={"count": x_label, "value": y_label},
     )
-    fig.update_traces(marker_color="#1D9E75", marker_line_width=0)
+    fig.update_traces(
+        marker_color="#1D9E75",
+        marker_line_width=0,
+        texttemplate="%{x}",
+        textposition="outside",
+    )
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
-        font_color="#E2E8F0",
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=False, autorange="reversed"),
-        margin=dict(l=0, r=0, t=30, b=0),
-        height=max(200, len(plot_data) * 32 + 60),
+        xaxis=dict(showgrid=False, color="#9ca3af", title_font_size=13),
+        yaxis=dict(
+            showgrid=False,
+            color="#9ca3af",
+            title_font_size=13,
+            autorange="reversed",
+            tickfont=dict(size=12),
+        ),
+        margin=dict(l=10, r=60, t=30, b=10),
+        height=max(220, len(top10_df) * 34 + 60),
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+        font=dict(color="#9ca3af"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -1866,9 +2333,8 @@ def _render_header():
             unsafe_allow_html=True,
         )
         if st.button("Logout", key="logout_btn"):
-            for k in list(st.session_state.keys()):
-                del st.session_state[k]
-            st.rerun()
+            from auth import logout
+            logout()
 
     st.markdown('<hr class="hdr-divider"/>', unsafe_allow_html=True)
 

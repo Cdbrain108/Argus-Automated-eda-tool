@@ -153,7 +153,11 @@ def load_data():
             print("No file selected.")
             return None, None,None
         
-client = Groq(api_key="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")
+try:
+    from utils import get_groq_client
+    client = get_groq_client()
+except ImportError:
+    client = Groq()
 
 def get_target_variables(data,dataset_name):
                 # Load the dataset
