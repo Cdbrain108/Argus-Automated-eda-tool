@@ -5,15 +5,13 @@ Routes between the auth page and the main home page.
 
 import streamlit as st
 
-from PIL import Image
-try:
-    icon = Image.open("argus_logo.png")
-except Exception:
-    icon = "📊"
+import os
+
+icon_path = "argus_logo.png" if os.path.exists("argus_logo.png") else "📊"
 
 st.set_page_config(
     page_title="Argus – An AI based Automated EDA Tool",
-    page_icon=icon,
+    page_icon=icon_path,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
