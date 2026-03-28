@@ -270,15 +270,21 @@ def _render_upload_widget():
         key="file_uploader",
     )
     if uploaded and "df" not in st.session_state:
-        with st.spinner(""):
+        with st.spinner("Processing file & AI decoding numeric categories..."):
             _show_processing_bar()
-            df  = load_file(uploaded)
+            df_raw = load_file(uploaded)
+            dataset_name = uploaded.name.rsplit(".", 1)[0]
+            
+            # ── AI Encoding Layer ──
+            from ai_encoder import ai_encode_dataframe
+            df = ai_encode_dataframe(df_raw, dataset_name)
+            
             eda = run_eda(df)
             st.session_state.update(
                 df=df,
                 eda_result=eda,
                 file_name=uploaded.name,
-                dataset_name=uploaded.name.rsplit(".", 1)[0],
+                dataset_name=dataset_name,
                 just_uploaded=True,
                 chat_history=[{
                     "role": "assistant",
@@ -2401,36 +2407,46 @@ def _inject_css():
     }
     /* ── Tabs */
     [data-testid="stTabs"] > div:first-child {
-        border-bottom: 3px solid #F97316 !important;
-        gap: 12px !important;
+        border-bottom: 4px solid #F97316 !important;
+        gap: 10px !important;
         padding-bottom: 0 !important;
-        margin-bottom: 15px !important;
+        margin-bottom: 20px !important;
+        flex-wrap: wrap !important;
     }
+    /* Inactive tab */
     [data-testid="stTab"] {
-        color: #E2E8F0 !important;
-        font-weight: 800 !important;
-        font-size: 1.25rem !important;
-        padding: 14px 28px !important;
-        background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%) !important;
-        border: 2px solid rgba(56,189,248,0.3) !important;
+        color: #CBD5E1 !important;
+        font-weight: 900 !important;
+        font-size: 1.05rem !important;
+        padding: 13px 22px !important;
+        min-width: 120px !important;
+        text-align: center !important;
+        background: linear-gradient(160deg, rgba(30,42,68,0.9) 0%, rgba(15,26,46,0.95) 100%) !important;
+        border: 2px solid rgba(56,189,248,0.35) !important;
         border-bottom: none !important;
         border-radius: 14px 14px 0 0 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        letter-spacing: 0.03em;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        letter-spacing: 0.04em !important;
+        text-transform: uppercase !important;
     }
+    /* Hover — blue glow */
     [data-testid="stTab"]:hover {
-        background: linear-gradient(180deg, rgba(56,189,248,0.2) 0%, rgba(56,189,248,0.05) 100%) !important;
+        background: linear-gradient(160deg, rgba(56,189,248,0.22) 0%, rgba(14,165,233,0.08) 100%) !important;
         border-color: #38BDF8 !important;
         color: #FFFFFF !important;
-        transform: translateY(-2px);
+        box-shadow: 0 -4px 18px rgba(56,189,248,0.35) !important;
+        transform: translateY(-3px) !important;
     }
+    /* Active tab — bold orange gradient + strong glow */
     [data-testid="stTab"][aria-selected="true"] {
         color: #FFFFFF !important;
-        background: linear-gradient(135deg, #F97316 0%, #EA580C 100%) !important;
-        border: 2px solid #FDBA74 !important;
+        font-size: 1.1rem !important;
+        background: linear-gradient(135deg, #FF8C00 0%, #F97316 50%, #EA580C 100%) !important;
+        border: 2.5px solid #FDBA74 !important;
         border-bottom: none !important;
-        box-shadow: 0 -6px 24px rgba(249,115,22,0.45) !important;
-        transform: translateY(-4px);
+        box-shadow: 0 -8px 30px rgba(249,115,22,0.55), 0 2px 0 #F97316 !important;
+        transform: translateY(-5px) !important;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.4) !important;
     }
     /* ── Upload zone */
     [data-testid="stFileUploader"] > div:first-child {
@@ -2485,19 +2501,43 @@ def _inject_css():
     [data-testid="stTextInput"] input:focus {
         border-color:#F97316 !important; box-shadow:0 0 0 3px rgba(249,115,22,0.15) !important;
     }
-    /* ── Buttons */
-    [data-testid="stButton"] button,
-    [data-testid="stFormSubmitButton"] > button {
-        background:rgba(249,115,22,0.12) !important;
-        border:1px solid rgba(249,115,22,0.35) !important;
-        color:#FB923C !important; border-radius:20px !important;
-        font-size:0.78rem !important; transition:all 0.2s !important;
-        white-space:normal !important; height:auto !important;
+    /* ── Buttons (scoped to avoid tab conflicts) */
+    [data-testid="stButton"] > button {
+        background: rgba(249,115,22,0.12) !important;
+        border: 1px solid rgba(249,115,22,0.35) !important;
+        color: #FB923C !important;
+        border-radius: 20px !important;
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+        padding: 8px 20px !important;
+        transition: all 0.2s !important;
+        white-space: normal !important;
+        height: auto !important;
     }
-    [data-testid="stButton"] button:hover,
+    [data-testid="stButton"] > button:hover {
+        background: rgba(249,115,22,0.25) !important;
+        border-color: #F97316 !important;
+        color: #fff !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 16px rgba(249,115,22,0.3) !important;
+    }
+    /* Form submit buttons (Login / Sign Up) */
+    [data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(135deg, rgba(249,115,22,0.2), rgba(234,88,12,0.15)) !important;
+        border: 1px solid rgba(249,115,22,0.5) !important;
+        color: #FB923C !important;
+        border-radius: 12px !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        padding: 10px 24px !important;
+        transition: all 0.2s !important;
+    }
     [data-testid="stFormSubmitButton"] > button:hover {
-        background:rgba(249,115,22,0.25) !important;
-        border-color:#F97316 !important; color:#fff !important; transform:translateY(-1px) !important;
+        background: linear-gradient(135deg, rgba(249,115,22,0.4), rgba(234,88,12,0.3)) !important;
+        border-color: #F97316 !important;
+        color: #fff !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(249,115,22,0.35) !important;
     }
     /* ── Data Summary */
     .summary-header-card {
