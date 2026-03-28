@@ -11,8 +11,6 @@ from text_generation import AI
 from groq import Groq
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
-import ipywidgets as widgets
-from IPython.display import display
 from matplotlib.backends.backend_pdf import PdfPages
 import importlib
 try:
