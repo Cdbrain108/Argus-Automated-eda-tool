@@ -116,22 +116,33 @@ header {visibility: hidden;}
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _render_navbar():
+    import base64
+    import os
+    logo_path = os.path.join(os.path.dirname(__file__), "argus_logo.png")
+    try:
+        with open(logo_path, "rb") as f:
+            b64_logo = base64.b64encode(f.read()).decode()
+    except Exception:
+        b64_logo = ""
+
+    logo_img = f'<img src="data:image/png;base64,{b64_logo}" alt="Argus" style="width:28px;height:28px;border-radius:50%;box-shadow:0 0 8px rgba(249,115,22,0.4)">'
+
     st.markdown(
-        '<div style="position:sticky;top:0;z-index:999;background:rgba(10,14,26,0.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.06);padding:12px 40px;display:flex;align-items:center;justify-content:space-between">'
-        '<div style="display:flex;align-items:center;gap:10px">'
-        '<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f97316,#7F77DD);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">A</div>'
-        '<span style="font-size:16px;font-weight:800;color:#f97316">Argus</span>'
-        '</div>'
-        '<div style="display:flex;gap:4px;align-items:center">'
-        '<a href="#" class="arg-nav-link">Home</a>'
-        '<a href="#" class="arg-nav-link">Features</a>'
-        '<a href="#" class="arg-nav-link">How it works</a>'
-        '<a href="#" class="arg-nav-link">Gallery</a>'
-        '<a href="#" class="arg-nav-link">About</a>'
-        '<a href="#" class="arg-nav-link">FAQ</a>'
-        '</div>'
-        '<a href="#" style="background:#f97316;color:#000;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none">Get started free</a>'
-        '</div>',
+        f'<div style="position:sticky;top:0;z-index:999;background:rgba(10,14,26,0.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.06);padding:12px 40px;display:flex;align-items:center;justify-content:space-between">'
+        f'<div style="display:flex;align-items:center;gap:10px">'
+        f'{logo_img}'
+        f'<span style="font-size:16px;font-weight:800;color:#f97316">Argus</span>'
+        f'</div>'
+        f'<div style="display:flex;gap:4px;align-items:center">'
+        f'<a href="#" class="arg-nav-link">Home</a>'
+        f'<a href="#" class="arg-nav-link">Features</a>'
+        f'<a href="#" class="arg-nav-link">How it works</a>'
+        f'<a href="#" class="arg-nav-link">Gallery</a>'
+        f'<a href="#" class="arg-nav-link">About</a>'
+        f'<a href="#" class="arg-nav-link">FAQ</a>'
+        f'</div>'
+        f'<a href="#" style="background:#f97316;color:#000;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none">Get started free</a>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
