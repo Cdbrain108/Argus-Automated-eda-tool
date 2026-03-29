@@ -67,11 +67,13 @@ def run_eda(df: pd.DataFrame) -> dict:
 
 def chat_response(question: str,
                   eda_context: dict,
-                  llm_context: list[str] | None = None) -> str:
+                  llm_context: list[str] | None = None,
+                  chat_history: list[dict] | None = None) -> str:
     """
     Send the user question to Groq LLaMA with:
       - EDA metadata (rows, cols, dtypes, missing)
       - Accumulated LLM-generated analysis (bivariate descriptions, summaries, etc.)
+      - Chat history
     Returns the LLM answer as a markdown string.
     """
     llm_context = llm_context or []
@@ -106,10 +108,12 @@ Data types:
 Answer in a friendly, insightful way. If the user asks about something not in the data, say so.
 Keep answers under 200 words unless more detail is genuinely needed."""
 
-    messages = [
-        {"role": "system", "content": system_msg},
-        {"role": "user",   "content": question},
-    ]
+    messages = [{"role": "system", "content": system_msg}]
+    if chat_history:
+        # Pass the last 10 messages to keep memory manageable
+        messages.extend(chat_history[-10:])
+    else:
+        messages.append({"role": "user", "content": question})
 
     try:
         client = get_groq_client()

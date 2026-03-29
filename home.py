@@ -1004,6 +1004,11 @@ def _render_data_summary(df: pd.DataFrame):
             st.session_state["ai_summary_text"] = clean
             st.session_state["ai_summary_typed"] = False   # trigger typewriter
 
+            ctx = st.session_state.setdefault("llm_context", [])
+            summary_str = f"Dataset Overview AI Summary: {clean}"
+            if summary_str not in ctx:
+                ctx.append(summary_str)
+
         st.rerun()
 
     # ── Render the stored text ────────────────────────────────────────────────
@@ -1638,6 +1643,12 @@ def _render_numeric_distribution(df: pd.DataFrame):
         unsafe_allow_html=True,
     )
 
+    if ai_desc:
+        ctx = st.session_state.setdefault("llm_context", [])
+        insight_str = f"Numeric Column Analysis for '{selected_col}': {ai_desc}"
+        if insight_str not in ctx:
+            ctx.append(insight_str)
+
 
 # ── Categorical Insights helpers (cached Groq calls) ─────────────────────────
 
@@ -1907,6 +1918,12 @@ def _render_categorical_insights(df: pd.DataFrame):
         unsafe_allow_html=True,
     )
 
+    if description:
+        ctx = st.session_state.setdefault("llm_context", [])
+        insight_str = f"Categorical Column Analysis for '{col}' (Top value: {top_value}): {description}"
+        if insight_str not in ctx:
+            ctx.append(insight_str)
+
 
 # ── Tab 4 · Bivariate Analysis ────────────────────────────────────────────────
 
@@ -2071,7 +2088,7 @@ def _handle_chat(q: str, eda: dict):
     hist.append({"role": "user", "content": q})
     llm_ctx = st.session_state.get("llm_context", [])
     with st.spinner("Argus AI is thinking…"):
-        ans = chat_response(q, eda, llm_context=llm_ctx)
+        ans = chat_response(q, eda, llm_context=llm_ctx, chat_history=hist)
     hist.append({"role": "assistant", "content": ans})
     st.session_state["just_asked_question"] = True
     st.rerun()

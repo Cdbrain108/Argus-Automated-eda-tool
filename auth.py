@@ -1,6 +1,7 @@
 """
-auth.py — Animated login/signup page for Glimpse.
-Features: particle canvas, animated stat counters, floating feature cards, glowing form.
+auth.py — Redesigned Argus landing page + login/signup.
+Full-page dark design with sections: Nav, Hero, Features, How it works,
+Gallery, About, FAQ, CTA, Footer — followed by the auth form.
 """
 
 import streamlit as st
@@ -62,265 +63,298 @@ def _valid_email(e: str) -> bool:
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def show_auth_page():
-    _inject_css_and_canvas()
+    _inject_global_css()
+    _render_navbar()
     _render_hero()
-    _render_stat_counters()
-    _render_feature_cards()
-    st.markdown("<br>", unsafe_allow_html=True)
+    _render_features()
+    _render_how_it_works()
+    _render_gallery()
+    _render_about()
+    _render_faq()
+    _render_cta()
+    st.markdown("<br><br>", unsafe_allow_html=True)
     _render_auth_form()
-    st.markdown('<p class="tos-note">By continuing you agree to our Terms of Service</p>',
-                unsafe_allow_html=True)
+    _render_footer()
 
 
-# ── Sections ───────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 1: GLOBAL CSS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _inject_global_css():
+    st.markdown("""<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+.block-container {padding-top: 0 !important;padding-left: 0 !important;padding-right: 0 !important;max-width: 100% !important;}
+.arg-nav-link {font-size: 13px;color: #9ca3af;cursor: pointer;padding: 6px 14px;border-radius: 6px;text-decoration: none;transition: color 0.15s;}
+.arg-nav-link:hover { color: #ffffff; }
+.arg-section-tag {display: inline-block;font-size: 10px;padding: 3px 10px;border-radius: 20px;font-weight: 700;letter-spacing: 0.06em;margin-bottom: 10px;}
+.arg-card {background: #1a1f2e;border: 1px solid #2d3748;border-radius: 12px;padding: 16px 18px;}
+.arg-stat {background: rgba(255,255,255,0.05);border: 1px solid rgba(255,255,255,0.08);border-radius: 12px;padding: 14px 18px;text-align: center;}
+.arg-pill {display: inline-flex;align-items: center;gap: 6px;font-size: 11px;padding: 4px 12px;border-radius: 20px;margin: 3px;}
+.arg-step {width: 32px;height: 32px;border-radius: 50%;display: inline-flex;align-items: center;justify-content: center;font-size: 13px;font-weight: 700;}
+.arg-insight {border-radius: 10px;padding: 14px 16px;border-left: 3px solid;}
+.arg-faq {border-bottom: 1px solid rgba(255,255,255,0.07);padding: 14px 0;}
+.arg-btn-primary {background: #f97316;color: #000;border: none;border-radius: 10px;padding: 13px 28px;font-size: 14px;font-weight: 700;cursor: pointer;text-decoration: none;display: inline-block;}
+.arg-btn-secondary {background: transparent;color: #fff;border: 1px solid rgba(255,255,255,0.15);border-radius: 10px;padding: 13px 24px;font-size: 14px;cursor: pointer;text-decoration: none;display: inline-block;}
+@keyframes pulse {0%, 100% { opacity: 1; }50% { opacity: 0.4; }}
+.arg-pulse {width: 7px; height: 7px;border-radius: 50%;background: #f97316;display: inline-block;animation: pulse 1.5s infinite;margin-right: 6px;}
+.stApp {background: #0a0e1a !important;}
+[data-testid="stTabs"] {background: rgba(255,255,255,0.04);border: 1px solid rgba(249,115,22,0.22);border-radius: 20px; padding: 24px 28px 20px;backdrop-filter: blur(14px); position: relative; z-index: 1;}
+[data-testid="stTab"] { color: #94A3B8 !important; font-weight: 500; }
+[data-testid="stTab"][aria-selected="true"] { color: #F97316 !important; }
+[data-testid="stTextInput"] input {background: rgba(255,255,255,0.05) !important;border: 1px solid rgba(249,115,22,0.28) !important;border-radius: 10px !important; color: #E2E8F0 !important; padding: 11px 14px !important;}
+[data-testid="stTextInput"] input:focus {border-color: #F97316 !important;box-shadow: 0 0 0 3px rgba(249,115,22,0.18) !important;outline: none !important;}
+[data-testid="stFormSubmitButton"] > button {background: linear-gradient(135deg, #F97316, #EA580C) !important;color: #fff !important; border: none !important;border-radius: 10px !important; font-size: 1rem !important;font-weight: 700 !important; padding: 12px !important;box-shadow: 0 0 24px rgba(249,115,22,0.35) !important;transition: all 0.25s !important;}
+[data-testid="stFormSubmitButton"] > button:hover {box-shadow: 0 0 42px rgba(249,115,22,0.6) !important;transform: translateY(-2px) !important;}
+</style>""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 2: STICKY NAVIGATION BAR
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _render_navbar():
+    st.markdown(
+        '<div style="position:sticky;top:0;z-index:999;background:rgba(10,14,26,0.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.06);padding:12px 40px;display:flex;align-items:center;justify-content:space-between">'
+        '<div style="display:flex;align-items:center;gap:10px">'
+        '<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f97316,#7F77DD);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">A</div>'
+        '<span style="font-size:16px;font-weight:800;color:#f97316">Argus</span>'
+        '</div>'
+        '<div style="display:flex;gap:4px;align-items:center">'
+        '<a href="#" class="arg-nav-link">Home</a>'
+        '<a href="#" class="arg-nav-link">Features</a>'
+        '<a href="#" class="arg-nav-link">How it works</a>'
+        '<a href="#" class="arg-nav-link">Gallery</a>'
+        '<a href="#" class="arg-nav-link">About</a>'
+        '<a href="#" class="arg-nav-link">FAQ</a>'
+        '</div>'
+        '<a href="#" style="background:#f97316;color:#000;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none">Get started free</a>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 3: HERO SECTION
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _render_hero():
-    import base64
-    import os
-    logo_path = os.path.join(os.path.dirname(__file__), "argus_logo.png")
-    try:
-        with open(logo_path, "rb") as f:
-            b64_logo = base64.b64encode(f.read()).decode()
-    except Exception:
-        b64_logo = ""
-
-    # Animated Argus logo
-    argus_logo_html = f"""
-<div class="argus-logo" title="Argus EDA" style="margin-bottom:12px;">
-  <img src="data:image/png;base64,{b64_logo}" alt="Argus Logo" style="width:100px; height:100px; border-radius:50%; box-shadow:0 0 24px rgba(249,115,22,0.35); animation:logoPulse 3s ease-in-out infinite;">
-</div>
-"""
-
-    st.markdown(f"""
-<div class="hero-wrap">
-{argus_logo_html}
-<div class="brand-title">Argus</div>
-<div class="brand-typewriter">
-<span class="tw-text" id="tw"></span><span class="tw-cursor">|</span>
-</div>
-</div>
-""", unsafe_allow_html=True)
-    
-    import streamlit.components.v1 as components
-    components.html("""
-    <script>
-    (function(){
-        var phrases = [
-            "Create a report from your data.",
-            "Ask anything about your dataset.",
-            "Discover hidden patterns instantly.",
-            "Detect outliers with one click.",
-            "Chat with your data using AI.",
-            "Generate 10+ charts in seconds."
-        ];
-        var el = window.parent.document.getElementById('tw');
-        if(!el) return;
-        if(el.getAttribute('data-typing') === 'true') return;
-        el.setAttribute('data-typing', 'true');
-        
-        var pi=0, ci=0, deleting=false;
-        function tick(){
-            var phrase = phrases[pi];
-            el.textContent = deleting ? phrase.substring(0,ci--) : phrase.substring(0,ci++);
-            var speed = deleting ? 40 : 70;
-            if(!deleting && ci>phrase.length){ speed=1400; deleting=true; }
-            if(deleting && ci<0){ deleting=false; pi=(pi+1)%phrases.length; ci=0; speed=300; }
-            setTimeout(tick, speed);
-        }
-        tick();
-    })();
-    </script>
-    """, height=0, width=0)
+    st.markdown(
+        '<div id="home" style="text-align:center;padding:60px 40px 40px;background:#0a0e1a">'
+        '<div style="display:inline-flex;align-items:center;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);border-radius:20px;padding:5px 16px;font-size:11px;color:#f97316;margin-bottom:22px">'
+        '<span class="arg-pulse"></span>Now with AI-powered column descriptions</div>'
+        '<h1 style="font-size:46px;font-weight:800;line-height:1.15;margin-bottom:14px;color:#fff">'
+        'Understand your data<br>'
+        '<span style="background:linear-gradient(90deg,#f97316,#7F77DD);-webkit-background-clip:text;-webkit-text-fill-color:transparent">in under 30 seconds</span></h1>'
+        '<p style="font-size:15px;color:#9ca3af;max-width:500px;margin:0 auto 28px;line-height:1.75">'
+        'Upload any CSV or Excel file. Argus automatically generates charts, detects anomalies, and explains every column in plain English — no code required.</p>'
+        '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">'
+        '<a href="#" class="arg-btn-primary">Upload your dataset →</a>'
+        '<a href="#" class="arg-btn-secondary">See sample insights</a></div>'
+        '<div style="margin-bottom:36px">'
+        '<span class="arg-pill" style="background:rgba(127,119,221,0.12);color:#AFA9EC;border:1px solid rgba(127,119,221,0.2)">No signup needed</span>'
+        '<span class="arg-pill" style="background:rgba(29,158,117,0.12);color:#5DCAA5;border:1px solid rgba(29,158,117,0.2)">Works with any dataset</span>'
+        '<span class="arg-pill" style="background:rgba(55,138,221,0.12);color:#85B7EB;border:1px solid rgba(55,138,221,0.2)">AI descriptions included</span>'
+        '<span class="arg-pill" style="background:rgba(239,159,39,0.12);color:#FAC775;border:1px solid rgba(239,159,39,0.2)">10+ charts auto-generated</span></div>'
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:620px;margin:0 auto">'
+        '<div class="arg-stat"><p style="font-size:24px;font-weight:800;color:#f97316;margin:0">13+</p><p style="font-size:11px;color:#6b7280;margin:4px 0 0">Datasets analyzed</p></div>'
+        '<div class="arg-stat"><p style="font-size:24px;font-weight:800;color:#f97316;margin:0">★ 4.5</p><p style="font-size:11px;color:#6b7280;margin:4px 0 0">User rating</p></div>'
+        '<div class="arg-stat"><p style="font-size:24px;font-weight:800;color:#f97316;margin:0">110+</p><p style="font-size:11px;color:#6b7280;margin:4px 0 0">Charts generated</p></div>'
+        '<div class="arg-stat"><p style="font-size:24px;font-weight:800;color:#f97316;margin:0">9+</p><p style="font-size:11px;color:#6b7280;margin:4px 0 0">Questions answered</p></div>'
+        '</div></div>'
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:0 40px"></div>',
+        unsafe_allow_html=True,
+    )
 
 
-def _render_stat_counters():
-    st.markdown("""
-    <style>
-    .stat-stars { 
-        font-size: 1.8rem; 
-        position: relative; 
-        display: inline-block; 
-        line-height: 1;
-        margin-bottom: 5px;
-    }
-    .stat-stars-bg { color: rgba(255,255,255,0.1); }
-    .stat-stars-fill {
-        color: #FCD34D; 
-        position: absolute; 
-        top: 0; left: 0; 
-        white-space: nowrap; 
-        overflow: hidden;
-        width: 0%; 
-        animation: fillStars 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    }
-    @keyframes fillStars { from { width: 0%; } to { width: 90%; } }
-    </style>
-    <div class="stats-row">
-        <div class="stat-box">
-            <div class="stat-num" id="stat-datasets">5+</div>
-            <div class="stat-label">Datasets Analyzed</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-stars">
-                <span class="stat-stars-bg">★★★★★</span>
-                <div class="stat-stars-fill">★★★★★</div>
-            </div>
-            <div class="stat-label">User Rating (from 3+ users)</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-num" id="stat-charts">30+</div>
-            <div class="stat-label">Charts Generated</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-num" id="stat-questions">9+</div>
-            <div class="stat-label">Questions Answered</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    import streamlit.components.v1 as components
-    components.html("""
-    <script>
-    (function(){
-        try {
-            const ls = window.parent.localStorage;
-            if (!ls.getItem('argus_datasets')) ls.setItem('argus_datasets', '5');
-            if (!ls.getItem('argus_charts')) ls.setItem('argus_charts', '30');
-            if (!ls.getItem('argus_questions')) ls.setItem('argus_questions', '9');
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 4: FEATURES SECTION
+# ══════════════════════════════════════════════════════════════════════════════
 
-            function animate(id, target) {
-                const el = window.parent.document.getElementById(id);
-                if (!el) return;
-                let start = 0;
-                const duration = 1500;
-                const startTime = performance.now();
-                
-                function update() {
-                    let progress = Math.min((performance.now() - startTime) / duration, 1);
-                    let ease = 1 - (1 - progress) * (1 - progress);
-                    let current = Math.floor(ease * target);
-                    el.innerText = current + "+";
-                    if (progress < 1) window.parent.requestAnimationFrame(update);
-                    else el.innerText = target + "+";
-                }
-                window.parent.requestAnimationFrame(update);
-            }
-
-            animate('stat-datasets', parseInt(ls.getItem('argus_datasets')));
-            animate('stat-charts', parseInt(ls.getItem('argus_charts')));
-            animate('stat-questions', parseInt(ls.getItem('argus_questions')));
-        } catch(e) { console.error('LocalStorage error:', e); }
-    })();
-    </script>
-    """, height=0, width=0)
+def _render_features():
+    st.markdown(
+        '<div id="features" style="padding:48px 40px;background:#0a0e1a">'
+        '<div style="text-align:center;margin-bottom:28px">'
+        '<span class="arg-section-tag" style="background:rgba(127,119,221,0.15);color:#7F77DD">FEATURES</span>'
+        '<h2 style="font-size:26px;font-weight:700;color:#fff;margin-bottom:6px">Everything EDA, automated</h2>'
+        '<p style="font-size:13px;color:#6b7280">What Argus does the moment you upload a file</p></div>'
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
+        # Card 1
+        '<div class="arg-card">'
+        '<div style="width:38px;height:38px;border-radius:10px;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px">⚡</div>'
+        '<p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Instant EDA</p>'
+        '<p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">10+ charts auto-generated in under 3 seconds — histograms, bar charts, heatmaps, trends, all in one click</p></div>'
+        # Card 2
+        '<div class="arg-card">'
+        '<div style="width:38px;height:38px;border-radius:10px;background:rgba(127,119,221,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px">🧠</div>'
+        '<p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">AI Column Descriptions</p>'
+        '<p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">Every column explained in plain English — distribution shape, outliers, missing data, and what to do next</p></div>'
+        # Card 3
+        '<div class="arg-card">'
+        '<div style="width:38px;height:38px;border-radius:10px;background:rgba(29,158,117,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px">💬</div>'
+        '<p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">AI Chat</p>'
+        '<p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">Ask anything about your data in plain English. &quot;Which column has the most outliers?&quot; — just ask.</p></div>'
+        # Card 4
+        '<div class="arg-card">'
+        '<div style="width:38px;height:38px;border-radius:10px;background:rgba(226,75,74,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px">🔍</div>'
+        '<p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Anomaly Detection</p>'
+        '<p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">Outliers flagged with IQR method. Negative values, zero prices, and impossible values all caught automatically</p></div>'
+        # Card 5
+        '<div class="arg-card">'
+        '<div style="width:38px;height:38px;border-radius:10px;background:rgba(55,138,221,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px">📊</div>'
+        '<p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Dataset Health Score</p>'
+        '<p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">A single 0-100 score summarising missing data, duplicates, and outlier severity — at a glance</p></div>'
+        # Card 6
+        '<div class="arg-card">'
+        '<div style="width:38px;height:38px;border-radius:10px;background:rgba(239,159,39,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px">🎯</div>'
+        '<p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Smart Next Steps</p>'
+        '<p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">AI recommends exactly what to do — impute missing values, log-transform skewed cols, encode categoricals</p></div>'
+        '</div></div>'
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:0 40px"></div>',
+        unsafe_allow_html=True,
+    )
 
 
-def _render_feature_cards():
-    st.markdown("""
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:0 auto 28px;max-width:900px;position:relative;z-index:1;">
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 5: HOW IT WORKS SECTION
+# ══════════════════════════════════════════════════════════════════════════════
 
-  <!-- CAPABILITIES -->
-  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
-    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#a78bfa;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);border-radius:20px;padding:3px 10px;">CAPABILITIES</span>
-    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 18px;">What Argus auto-detects</h3>
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div style="display:flex;align-items:flex-start;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:8px;background:rgba(56,189,248,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">⊞</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Missing values &amp; duplicates</p><p style="color:#475569;font-size:0.76rem;margin:0;">flagged per column with severity</p></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:8px;background:rgba(52,211,153,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">↗</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Outliers by IQR method</p><p style="color:#475569;font-size:0.76rem;margin:0;">count, % and affected columns</p></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:8px;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">⏱</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Skewed distributions</p><p style="color:#475569;font-size:0.76rem;margin:0;">log-transform suggestions included</p></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:12px;">
-        <div style="width:36px;height:36px;border-radius:8px;background:rgba(248,113,113,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">∿</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Strong correlations</p><p style="color:#475569;font-size:0.76rem;margin:0;">top pairs ranked by |r| value</p></div>
-      </div>
-    </div>
-  </div>
+def _render_how_it_works():
+    st.markdown(
+        '<div id="how-it-works" style="padding:48px 40px;background:rgba(255,255,255,0.02)">'
+        '<div style="text-align:center;margin-bottom:28px">'
+        '<span class="arg-section-tag" style="background:rgba(239,159,39,0.15);color:#EF9F27">HOW IT WORKS</span>'
+        '<h2 style="font-size:26px;font-weight:700;color:#fff;margin-bottom:6px">Upload to insight in 4 steps</h2>'
+        '<p style="font-size:13px;color:#6b7280">No setup. No code. No learning curve.</p></div>'
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">'
+        '<div style="text-align:center;padding:20px 12px"><div class="arg-step" style="background:#f97316;color:#000;margin:0 auto 14px">1</div><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Upload your file</p><p style="font-size:11px;color:#6b7280;line-height:1.7">CSV, Excel or JSON — drag and drop, no schema or config needed</p></div>'
+        '<div style="text-align:center;padding:20px 12px"><div class="arg-step" style="background:#7F77DD;color:#fff;margin:0 auto 14px">2</div><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">AI reads your data</p><p style="font-size:11px;color:#6b7280;line-height:1.7">Detects column types, domain, structure, and quality issues automatically</p></div>'
+        '<div style="text-align:center;padding:20px 12px"><div class="arg-step" style="background:#1D9E75;color:#fff;margin:0 auto 14px">3</div><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Charts generated</p><p style="font-size:11px;color:#6b7280;line-height:1.7">10+ interactive charts with AI description per column, instantly</p></div>'
+        '<div style="text-align:center;padding:20px 12px"><div class="arg-step" style="background:#378ADD;color:#fff;margin:0 auto 14px">4</div><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Chat with your data</p><p style="font-size:11px;color:#6b7280;line-height:1.7">Ask anything in plain English and get instant AI answers</p></div>'
+        '</div></div>'
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:0 40px"></div>',
+        unsafe_allow_html=True,
+    )
 
-  <!-- COMPATIBILITY -->
-  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
-    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#34d399;background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);border-radius:20px;padding:3px 10px;">COMPATIBILITY</span>
-    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 4px;">Works with any dataset</h3>
-    <p style="color:#475569;font-size:0.78rem;margin:0 0 18px;">Drop in your file and Argus figures out the rest</p>
-    <div style="display:flex;gap:10px;margin-bottom:18px;">
-      <div style="flex:1;background:#1a2340;border:1px solid #2d3a55;border-radius:10px;padding:12px;text-align:center;">
-        <p style="color:#38bdf8;font-weight:700;font-size:0.95rem;margin:0 0 2px;">.CSV</p><p style="color:#475569;font-size:0.68rem;margin:0;">any size</p>
-      </div>
-      <div style="flex:1;background:#1a2340;border:1px solid #2d3a55;border-radius:10px;padding:12px;text-align:center;">
-        <p style="color:#38bdf8;font-weight:700;font-size:0.95rem;margin:0 0 2px;">.XLSX</p><p style="color:#475569;font-size:0.68rem;margin:0;">multi-sheet</p>
-      </div>
-      <div style="flex:1;background:#1a2340;border:1px solid #2d3a55;border-radius:10px;padding:12px;text-align:center;">
-        <p style="color:#38bdf8;font-weight:700;font-size:0.95rem;margin:0 0 2px;">.JSON</p><p style="color:#475569;font-size:0.68rem;margin:0;">nested ok</p>
-      </div>
-    </div>
-    <p style="color:#64748b;font-size:0.76rem;margin:0 0 10px;">Tested on domains:</p>
-    <div style="display:flex;flex-wrap:wrap;gap:7px;">
-      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:#7dd3fc;">Healthcare</span>
-      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:#6ee7b7;">Retail &amp; Sales</span>
-      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#fdba74;">Finance</span>
-      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.25);color:#c4b5fd;">HR &amp; People</span>
-      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:#fca5a5;">IoT / Sensor</span>
-      <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.25);color:#fde68a;">Marketing</span>
-    </div>
-  </div>
 
-  <!-- HOW IT WORKS -->
-  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
-    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#fb923c;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:20px;padding:3px 10px;">HOW IT WORKS</span>
-    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 18px;">From upload to insight in 4 steps</h3>
-    <div style="display:flex;flex-direction:column;gap:16px;">
-      <div style="display:flex;align-items:flex-start;gap:14px;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">1</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Upload your CSV or Excel</p><p style="color:#475569;font-size:0.76rem;margin:0;">No setup, no schema definition needed</p></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:14px;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">2</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">AI reads &amp; summarises your data</p><p style="color:#475569;font-size:0.76rem;margin:0;">Domain, structure, quality — in plain English</p></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:14px;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">3</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">10+ charts auto-generated</p><p style="color:#475569;font-size:0.76rem;margin:0;">Distributions, correlations, trends, outliers</p></div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:14px;">
-        <div style="width:28px;height:28px;border-radius:50%;background:#F97316;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;color:#fff;flex-shrink:0;">4</div>
-        <div><p style="color:#e2e8f0;font-weight:600;font-size:0.88rem;margin:0 0 2px;">Chat with your data</p><p style="color:#475569;font-size:0.76rem;margin:0;">Ask anything, get instant AI answers</p></div>
-      </div>
-    </div>
-  </div>
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 6: GALLERY SECTION
+# ══════════════════════════════════════════════════════════════════════════════
 
-  <!-- PREVIEW -->
-  <div style="background:#12182b;border:1px solid #1e2a45;border-radius:16px;padding:28px;">
-    <span style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:#f87171;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:20px;padding:3px 10px;">PREVIEW</span>
-    <h3 style="color:#fff;font-size:1.1rem;font-weight:700;margin:14px 0 4px;">Sample AI insights</h3>
-    <p style="color:#475569;font-size:0.78rem;margin:0 0 18px;">The kind of descriptions Argus generates automatically</p>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div style="border-left:3px solid #7c3aed;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;padding:12px 14px;">
-        <p style="color:#64748b;font-size:0.7rem;margin:0 0 5px;">Age column — heart disease dataset</p>
-        <p style="color:#e2e8f0;font-size:0.82rem;font-weight:600;margin:0;">&ldquo;Roughly symmetric, mean 47.8 yrs. Most patients are 40&ndash;60. No missing values &mdash; clean and ready to use.&rdquo;</p>
-      </div>
-      <div style="border-left:3px solid #7c3aed;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;padding:12px 14px;">
-        <p style="color:#64748b;font-size:0.7rem;margin:0 0 5px;">Country column — retail dataset</p>
-        <p style="color:#e2e8f0;font-size:0.82rem;font-weight:600;margin:0;">&ldquo;UK dominates at 91% of records. 37 other countries share the rest &mdash; high cardinality, group rare ones.&rdquo;</p>
-      </div>
-      <div style="border-left:3px solid #7c3aed;background:rgba(124,58,237,0.07);border-radius:0 8px 8px 0;padding:12px 14px;">
-        <p style="color:#64748b;font-size:0.7rem;margin:0 0 5px;">Salary column — HR dataset</p>
-        <p style="color:#e2e8f0;font-size:0.82rem;font-weight:600;margin:0;">&ldquo;Strongly right-skewed (skew=2.1). Most earn $40K&ndash;$70K but outliers up to $500K pull the mean. Consider log transform.&rdquo;</p>
-      </div>
-    </div>
-  </div>
+def _render_gallery():
+    st.markdown(
+        '<div id="gallery" style="padding:48px 40px;background:#0a0e1a">'
+        '<div style="text-align:center;margin-bottom:28px">'
+        '<span class="arg-section-tag" style="background:rgba(29,158,117,0.15);color:#1D9E75">GALLERY</span>'
+        '<h2 style="font-size:26px;font-weight:700;color:#fff;margin-bottom:6px">Sample AI insights</h2>'
+        '<p style="font-size:13px;color:#6b7280">Real descriptions Argus generates — automatically</p></div>'
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
+        '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#7F77DD"><p style="font-size:10px;color:#7F77DD;margin:0 0 8px;font-weight:700;letter-spacing:.04em">AGE — HEART DISEASE DATASET</p><p style="font-size:12px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;Roughly symmetric, mean 47.8 yrs. Most patients aged 40-60. No missing values — clean and ready to use.&rdquo;</p></div>'
+        '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#1D9E75"><p style="font-size:10px;color:#1D9E75;margin:0 0 8px;font-weight:700;letter-spacing:.04em">COUNTRY — RETAIL DATASET</p><p style="font-size:12px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;UK dominates at 91% of records. 37 other countries share the rest — high cardinality, consider grouping rare values.&rdquo;</p></div>'
+        '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#EF9F27"><p style="font-size:10px;color:#EF9F27;margin:0 0 8px;font-weight:700;letter-spacing:.04em">SALARY — HR DATASET</p><p style="font-size:12px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;Strongly right-skewed (skew=2.1). Most earn $40K-$70K but outliers up to $500K pull the mean. Consider log transform.&rdquo;</p></div>'
+        '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#E24B4A"><p style="font-size:10px;color:#E24B4A;margin:0 0 8px;font-weight:700;letter-spacing:.04em">CHOLESTEROL — MEDICAL DATASET</p><p style="font-size:12px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;154 unique values, max 603 — likely data entry error. 7.8% missing. Filter extreme values before modelling.&rdquo;</p></div>'
+        '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#378ADD"><p style="font-size:10px;color:#378ADD;margin:0 0 8px;font-weight:700;letter-spacing:.04em">QUANTITY — RETAIL DATASET</p><p style="font-size:12px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;10,624 negative values — likely returns. 75% of orders are 10 units or fewer. Filter negatives before revenue analysis.&rdquo;</p></div>'
+        '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#D4537E"><p style="font-size:10px;color:#D4537E;margin:0 0 8px;font-weight:700;letter-spacing:.04em">RATING — E-COMMERCE DATASET</p><p style="font-size:12px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;Discrete values 1-5. Rating 4 dominates at 38%. Left-skewed — customers rate high more than low overall.&rdquo;</p></div>'
+        '</div></div>'
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:0 40px"></div>',
+        unsafe_allow_html=True,
+    )
 
-</div>
-""", unsafe_allow_html=True)
 
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 7: ABOUT SECTION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _render_about():
+    st.markdown(
+        '<div id="about" style="padding:48px 40px;background:rgba(255,255,255,0.02)">'
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center">'
+        '<div>'
+        '<span class="arg-section-tag" style="background:rgba(55,138,221,0.15);color:#378ADD">ABOUT</span>'
+        '<h2 style="font-size:26px;font-weight:700;color:#fff;margin-bottom:12px">Why Argus?</h2>'
+        '<p style="font-size:13px;color:#9ca3af;line-height:1.85;margin-bottom:14px">'
+        'Exploratory data analysis is the most time-consuming and undervalued step in any data project. Argus was built to eliminate that bottleneck — giving analysts, students, and domain experts instant AI-powered insight into any dataset without writing a single line of code.</p>'
+        '<p style="font-size:13px;color:#9ca3af;line-height:1.85">'
+        'The name <span style="color:#f97316;font-weight:700">Argus</span> comes from the all-seeing giant of Greek mythology — a watcher with a hundred eyes. That\'s exactly what this tool does: it sees everything in your data that you might miss.</p></div>'
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+        '<div class="arg-card" style="text-align:center;padding:20px"><p style="font-size:28px;font-weight:800;color:#f97316;margin:0">100%</p><p style="font-size:11px;color:#6b7280;margin-top:5px">No-code EDA</p></div>'
+        '<div class="arg-card" style="text-align:center;padding:20px"><p style="font-size:28px;font-weight:800;color:#7F77DD;margin:0">Any</p><p style="font-size:11px;color:#6b7280;margin-top:5px">Domain dataset</p></div>'
+        '<div class="arg-card" style="text-align:center;padding:20px"><p style="font-size:28px;font-weight:800;color:#1D9E75;margin:0">&lt;30s</p><p style="font-size:11px;color:#6b7280;margin-top:5px">Full EDA time</p></div>'
+        '<div class="arg-card" style="text-align:center;padding:20px"><p style="font-size:28px;font-weight:800;color:#378ADD;margin:0">AI</p><p style="font-size:11px;color:#6b7280;margin-top:5px">Powered insights</p></div>'
+        '</div></div></div>'
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:0 40px"></div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 8: FAQ SECTION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _render_faq():
+    st.markdown(
+        '<div id="faq" style="padding:48px 40px;background:#0a0e1a">'
+        '<div style="text-align:center;margin-bottom:28px">'
+        '<span class="arg-section-tag" style="background:rgba(226,75,74,0.15);color:#E24B4A">FAQ</span>'
+        '<h2 style="font-size:26px;font-weight:700;color:#fff;margin-bottom:6px">Common questions</h2>'
+        '<p style="font-size:13px;color:#6b7280">Everything you want to know before you upload</p></div>'
+        '<div style="max-width:640px;margin:0 auto">'
+        '<div class="arg-faq"><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Do I need to know Python or SQL?</p><p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">No. Argus is fully no-code. Upload your file and everything happens automatically — no commands, no scripts.</p></div>'
+        '<div class="arg-faq"><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">What file types are supported?</p><p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">CSV, Excel (.xlsx, .xls), and JSON. Argus auto-detects column types and data domains without any configuration.</p></div>'
+        '<div class="arg-faq"><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">How do the AI descriptions work?</p><p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">Argus computes statistics per column — mean, skewness, outliers, missing % — then uses an LLM to write plain-English explanations covering distribution shape, data quality, and next steps.</p></div>'
+        '<div class="arg-faq"><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Will it work on my specific dataset?</p><p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">Yes. Argus has been tested on healthcare, retail, finance, HR, IoT, and marketing datasets. It auto-detects the domain and adjusts descriptions accordingly.</p></div>'
+        '<div class="arg-faq"><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">Is my data stored anywhere?</p><p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">No. Your data is processed in-session only and never saved to any server or database.</p></div>'
+        '<div class="arg-faq" style="border-bottom:none"><p style="font-size:13px;font-weight:600;color:#fff;margin:0 0 6px">How is this different from pandas profiling?</p><p style="font-size:12px;color:#6b7280;line-height:1.7;margin:0">Pandas profiling gives you statistics. Argus gives you understanding — AI-written descriptions, smart chart titles, anomaly flags, health scores, and a chat interface. It\'s EDA plus interpretation.</p></div>'
+        '</div></div>'
+        '<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:0 40px"></div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 9: FINAL CTA
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _render_cta():
+    st.markdown(
+        '<div id="upload" style="text-align:center;padding:56px 40px;background:linear-gradient(180deg,#0a0e1a,rgba(249,115,22,0.06))">'
+        '<h2 style="font-size:30px;font-weight:800;color:#fff;margin-bottom:10px">Ready to see your data differently?</h2>'
+        '<p style="font-size:14px;color:#9ca3af;margin-bottom:24px">Login or create an account below to get started.</p>'
+        '<p style="font-size:11px;color:#4b5563;margin-top:16px">CSV · Excel · JSON &nbsp;|&nbsp; No code required &nbsp;|&nbsp; Free to use</p></div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FOOTER
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _render_footer():
+    st.markdown(
+        '<div style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;background:#0a0e1a">'
+        '<span style="font-size:13px;font-weight:700;color:#f97316">Argus</span>'
+        '<span style="font-size:11px;color:#4b5563">An Automated EDA Tool · Built with Streamlit &amp; Groq</span>'
+        '<span style="font-size:11px;color:#4b5563">2025</span></div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTH FORM (preserved from original)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _render_auth_form():
     _, col, _ = st.columns([1, 2, 1])
     with col:
+        st.markdown(
+            '<div style="text-align:center;margin-bottom:16px">'
+            '<h3 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 4px">Login or Create Account</h3>'
+            '<p style="color:#6b7280;font-size:12px;margin:0">Access the full Argus dashboard</p></div>',
+            unsafe_allow_html=True,
+        )
+
         tab_login, tab_signup = st.tabs(["🔑  Login", "✨  Create Account"])
 
         with tab_login:
@@ -342,21 +376,29 @@ def _render_auth_form():
             if ok_s:
                 _handle_signup(name.strip(), email_s.strip(), pw_s)
 
+    st.markdown('<p style="font-size:0.72rem;color:#334155;text-align:center;margin-top:16px">'
+                'By continuing you agree to our Terms of Service</p>',
+                unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTH HANDLERS (preserved from original)
+# ══════════════════════════════════════════════════════════════════════════════
 
 def _handle_login(email, pw):
     if not email or not pw:
         st.error("Please fill in all fields."); return
-        
+
     users_col = get_db_collection()
     if users_col is None:
         st.error("⚠️ Database not configured: `MONGO_URI` missing in Streamlit secrets. Auth disabled."); return
-        
+
     user = users_col.find_one({"email": email})
     if not user:
         st.error("No account found. Please sign up first."); return
     if user.get("password") != _hash(pw):
         st.error("Incorrect password."); return
-        
+
     _set_session_and_cookie(user.get("name", "User"), email)
 
 def _handle_signup(name, email, pw):
@@ -366,30 +408,27 @@ def _handle_signup(name, email, pw):
         st.error("Invalid email address."); return
     if len(pw) < 6:
         st.error("Password must be at least 6 characters."); return
-        
+
     users_col = get_db_collection()
     if users_col is None:
         st.error("⚠️ Database not configured: `MONGO_URI` missing in Streamlit secrets. Auth disabled."); return
-        
+
     if users_col.find_one({"email": email}):
         st.error("Account already exists. Please log in."); return
-        
+
     users_col.insert_one({
-        "name": name, 
-        "email": email, 
-        "password": _hash(pw), 
+        "name": name,
+        "email": email,
+        "password": _hash(pw),
         "created_at": datetime.utcnow()
     })
-    
+
     st.success(f"Welcome aboard, {name}! 🎉")
     _set_session_and_cookie(name, email)
 
 def _set_session_and_cookie(name, email):
-    # Set the JWT token securely into cookies
     token = _mint_jwt(email, name)
     get_cookie_controller().set("argus_jwt", token)
-    
-    # Authenticate locally and delay rerun allowing cookie to inject 
     st.session_state.update(logged_in=True, user_name=name, user_email=email)
     time.sleep(0.7)
     st.rerun()
@@ -403,186 +442,3 @@ def logout():
         del st.session_state[k]
     time.sleep(0.5)
     st.rerun()
-
-
-# ── CSS + Canvas ───────────────────────────────────────────────────────────────
-
-def _inject_css_and_canvas():
-    st.markdown("""
-    <style>
-    #MainMenu, footer, header { visibility: hidden; }
-    /* ── Body */
-    .stApp { background: #0A0F1E; overflow-x: hidden; }
-    .block-container { padding-top: 0 !important; max-width: 100% !important; }
-    /* ── Particle Canvas */
-    #particle-canvas {
-        position: fixed; top: 0; left: 0;
-        width: 100%; height: 100%;
-        pointer-events: none; z-index: 0;
-    }
-    /* ── Hero */
-    .hero-wrap { text-align: center; padding: 52px 0 20px; position: relative; z-index: 1; }
-    .brand-icon  { font-size: 64px; animation: float 3s ease-in-out infinite; }
-    .argus-logo  { display:inline-flex; justify-content:center; }
-    .argus-logo svg { filter:drop-shadow(0 0 14px rgba(249,115,22,0.6)); animation:logoPulse 3s ease-in-out infinite; }
-    .argus-ring  { animation:rotateSlow 12s linear infinite; transform-origin:32px 32px; }
-    .argus-eye   { animation:eyePulse 2.5s ease-in-out infinite; }
-    .argus-scan  { animation:scanFade 2s ease-in-out infinite alternate; }
-    @keyframes rotateSlow { to { transform: rotate(360deg); } }
-    @keyframes eyePulse   { 0%,100%{opacity:0.9} 50%{opacity:1} }
-    @keyframes scanFade   { from{opacity:0.2} to{opacity:0.8} }
-    @keyframes logoPulse  { 0%,100%{filter:drop-shadow(0 0 10px rgba(249,115,22,0.45))} 50%{filter:drop-shadow(0 0 22px rgba(249,115,22,0.85))} }
-    .brand-title {
-        font-size: 3.2rem; font-weight: 900; letter-spacing:-1px;
-        background: linear-gradient(90deg, #F97316 0%, #FB923C 50%, #FCD34D 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        background-size: 200%; animation: shimmer 3s linear infinite;
-    }
-    .brand-typewriter { font-size: 1.05rem; color: #94A3B8; min-height: 28px; margin-top: 6px; }
-    .tw-cursor { color: #F97316; animation: blink 1s step-end infinite; }
-    @keyframes float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-    @keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
-    @keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0} }
-    /* ── Stats Row */
-    .stats-row {
-        display: flex; justify-content: center; gap: 20px;
-        margin: 28px auto 0; max-width: 760px; position: relative; z-index: 1;
-        flex-wrap: wrap;
-    }
-    .stat-box {
-        background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.25);
-        border-radius: 16px; padding: 18px 28px; text-align: center; min-width: 140px;
-        transition: transform 0.3s, box-shadow 0.3s;
-    }
-    .stat-box:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 28px rgba(249,115,22,0.25);
-    }
-    .stat-num   { font-size: 1.9rem; font-weight: 800; color: #F97316; }
-    .stat-label { font-size: 0.78rem; color: #64748B; margin-top: 4px; }
-    /* ── Feature Cards */
-    .feature-row {
-        display: flex; justify-content: center; gap: 16px;
-        margin: 32px auto; max-width: 860px; position: relative; z-index: 1;
-        flex-wrap: wrap;
-    }
-    .feat-card {
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 18px; padding: 22px 20px; min-width: 168px; max-width: 200px;
-        text-align: center; transition: all 0.35s; cursor: default;
-        position: relative; overflow: hidden;
-    }
-    .feat-card::before {
-        content: ''; position: absolute; inset: 0;
-        background: radial-gradient(circle at 50% 0%, rgba(249,115,22,0.12), transparent 70%);
-        opacity: 0; transition: opacity 0.35s;
-    }
-    .feat-card:hover { transform: translateY(-6px) scale(1.03);
-                       border-color: rgba(249,115,22,0.4);
-                       box-shadow: 0 12px 36px rgba(249,115,22,0.18); }
-    .feat-card:hover::before { opacity: 1; }
-    .feat-icon  { font-size: 1.9rem; margin-bottom: 8px; }
-    .feat-title { font-weight: 700; color: #E2E8F0; font-size: 0.95rem; margin-bottom: 4px; }
-    .feat-desc  { font-size: 0.75rem; color: #64748B; line-height: 1.5; }
-    /* ── Auth Tabs */
-    [data-testid="stTabs"] {
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(249,115,22,0.22);
-        border-radius: 20px; padding: 24px 28px 20px;
-        backdrop-filter: blur(14px); position: relative; z-index: 1;
-    }
-    [data-testid="stTab"] { color: #94A3B8 !important; font-weight: 500; }
-    [data-testid="stTab"][aria-selected="true"] { color: #F97316 !important; }
-    /* ── Inputs */
-    [data-testid="stTextInput"] input {
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(249,115,22,0.28) !important;
-        border-radius: 10px !important; color: #E2E8F0 !important; padding: 11px 14px !important;
-    }
-    [data-testid="stTextInput"] input:focus {
-        border-color: #F97316 !important;
-        box-shadow: 0 0 0 3px rgba(249,115,22,0.18) !important;
-        outline: none !important;
-    }
-    /* ── Submit buttons */
-    [data-testid="stFormSubmitButton"] > button {
-        background: linear-gradient(135deg, #F97316, #EA580C) !important;
-        color: #fff !important; border: none !important;
-        border-radius: 10px !important; font-size: 1rem !important;
-        font-weight: 700 !important; padding: 12px !important;
-        box-shadow: 0 0 24px rgba(249,115,22,0.35) !important;
-        transition: all 0.25s !important;
-    }
-    [data-testid="stFormSubmitButton"] > button:hover {
-        box-shadow: 0 0 42px rgba(249,115,22,0.6) !important;
-        transform: translateY(-2px) !important;
-    }
-    .tos-note { font-size:0.72rem; color:#334155; text-align:center; margin-top:16px; }
-    </style>
-    <!-- Particle Canvas -->
-    <canvas id="particle-canvas"></canvas>
-    """, unsafe_allow_html=True)
-    import streamlit.components.v1 as components
-    components.html("""
-    <script>
-    (function() {
-        const doc = window.parent.document;
-        const win = window.parent;
-        const canvas = doc.getElementById("particle-canvas");
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        canvas.width  = win.innerWidth;
-        canvas.height = win.innerHeight;
-        win.addEventListener("resize", () => {
-            canvas.width  = win.innerWidth;
-            canvas.height = win.innerHeight;
-        });
-        const COLORS = ["#F97316","#FB923C","#FCD34D","#94A3B8","#38BDF8"];
-        const particles = Array.from({length: 90}, () => ({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            r: Math.random() * 2 + 0.4,
-            dx: (Math.random() - 0.5) * 0.55,
-            dy: (Math.random() - 0.5) * 0.55,
-            color: COLORS[Math.floor(Math.random() * COLORS.length)],
-            alpha: Math.random() * 0.5 + 0.15
-        }));
-        function drawLines() {
-            for (let i = 0; i < particles.length; i++) {
-                for (let j = i+1; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
-                    const d  = Math.sqrt(dx*dx + dy*dy);
-                    if (d < 110) {
-                        ctx.beginPath();
-                        ctx.strokeStyle = `rgba(249,115,22,${0.12 * (1 - d/110)})`;
-                        ctx.lineWidth = 0.6;
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawLines();
-            particles.forEach(p => {
-                p.x += p.dx; p.y += p.dy;
-                if (p.x < 0 || p.x > canvas.width)  p.dx *= -1;
-                if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-                ctx.fillStyle = p.color.replace(")", `,${p.alpha})`).replace("rgb","rgba");
-                // simple hex to rgba
-                ctx.globalAlpha = p.alpha;
-                ctx.fillStyle = p.color;
-                ctx.fill();
-                ctx.globalAlpha = 1;
-            });
-            win.requestAnimationFrame(animate);
-        }
-        animate();
-    })();
-    </script>
-    """, height=0, width=0)
