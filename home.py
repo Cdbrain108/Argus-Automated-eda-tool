@@ -243,11 +243,10 @@ UNI_PDF_KEY = "uni_pdf_bytes"
 BI_PDF_KEY = "bi_pdf_bytes"
 
 SUGGESTIONS = [
-    "Show distribution of all columns",
-    "Identify missing values",
-    "Tell me about the column data types",
+    "Summarize all AI insights generated so far",
     "Which columns have the most outliers?",
     "Show correlation between columns",
+    "Identify missing values",
 ]
 
 
