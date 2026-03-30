@@ -13,8 +13,103 @@ st.set_page_config(
     page_title="Argus – An AI based Automated EDA Tool",
     page_icon=icon_path,
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
+
+st.markdown("""<style>
+/* ───────────────────────────────────────────────────────── */
+/* GLOBAL BEAUTIFUL BUTTON STYLES FOR ENTIRE ARGUS APP       */
+/* ───────────────────────────────────────────────────────── */
+
+/* 1. Base / Secondary Buttons */
+button[data-testid="baseButton-secondary"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    color: #e2e8f0 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    padding: 10px 22px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+button[data-testid="baseButton-secondary"]:hover {
+    background: rgba(249, 115, 22, 0.08) !important;
+    border-color: rgba(249, 115, 22, 0.4) !important;
+    color: #F97316 !important;
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.2) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* 2. Primary Buttons */
+button[data-testid="baseButton-primary"] {
+    background: linear-gradient(135deg, #F97316, #EA580C) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    padding: 10px 22px !important;
+    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.4) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+button[data-testid="baseButton-primary"]:hover {
+    box-shadow: 0 14px 30px -5px rgba(249, 115, 22, 0.5) !important;
+    transform: translateY(-3px) !important;
+    filter: brightness(1.05) !important;
+}
+
+/* 3. Form Submit Buttons (Make them distinct) */
+div[data-testid="stFormSubmitButton"] > button {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    padding: 10px 22px !important;
+    box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4) !important;
+    transition: all 0.25s ease !important;
+}
+div[data-testid="stFormSubmitButton"] > button:hover {
+    box-shadow: 0 14px 30px -5px rgba(99, 102, 241, 0.5) !important;
+    transform: translateY(-2px) !important;
+    filter: brightness(1.1) !important;
+}
+
+/* 4. Fix standard hyperlink/tertiary buttons to match theme instead of plain blue */
+button[kind="tertiary"], button[data-testid="baseButton-tertiary"], a:not([class^="arg-"]) {
+    color: #9ca3af !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+}
+button[kind="tertiary"]:hover, button[data-testid="baseButton-tertiary"]:hover, a:not([class^="arg-"]):hover {
+    color: #F97316 !important;
+    text-shadow: 0 0 10px rgba(249, 115, 22, 0.3) !important;
+}
+
+/* 5. File Uploader Browse Button */
+[data-testid="stFileUploader"] section > button {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px dashed rgba(249, 115, 22, 0.4) !important;
+    border-radius: 12px !important;
+    color: #F97316 !important;
+    font-weight: 600 !important;
+    padding: 8px 20px !important;
+    transition: all 0.25s ease !important;
+}
+[data-testid="stFileUploader"] section > button:hover {
+    background: rgba(249, 115, 22, 0.1) !important;
+    border-color: #F97316 !important;
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.2) !important;
+}
+
+/* Override Streamlit's default ugly focus ring */
+button:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2) !important;
+}
+</style>""", unsafe_allow_html=True)
 
 from auth import show_auth_page, authenticate_from_cookie
 from home import show_home_page
@@ -25,5 +120,7 @@ if not st.session_state.get("logged_in"):
 
 if not st.session_state.get("logged_in"):
     show_auth_page()
+elif st.session_state.get("guest_mode"):
+    show_home_page(guest=True)
 else:
     show_home_page()

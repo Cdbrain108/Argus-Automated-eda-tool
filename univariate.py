@@ -1,4 +1,5 @@
 import pandas as pd
+import io
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -124,7 +125,9 @@ class UnivariateAnalyzer:
         import matplotlib
         matplotlib.use("Agg")
 
-        with PdfPages('Uni_variate_output1.pdf') as pdf:
+        import io
+        buf = io.BytesIO()
+        with PdfPages(buf) as pdf:
 
             # ── Title page ────────────────────────────────────────────────────
             fig_title = plt.figure(figsize=(8, 3), facecolor=BG_COLOR)
@@ -259,15 +262,40 @@ class UnivariateAnalyzer:
                 pdf.savefig(fig, facecolor=BG_COLOR, bbox_inches='tight')
                 plt.close(fig)
 
+        buf.seek(0)
+        return buf.read()
+
 
 # ── uni_analyze_and_visualize ─────────────────────────────────────────────────
 
-def uni_analyze_and_visualize(df_5, dataset_name, target_variable):
+def uni_analyze_and_visualize(df_5, dataset_name, target_variable, mode="numeric"):
     """Run univariate analysis, generate PDF, and return context strings for AI chat."""
     text_generation = importlib.import_module("text_generation")
     ai_instance = AI()
     uni_poss_corr = ai_instance.uni_poss_corr
-    analyzer1 = UnivariateAnalyzer1(df_5)
+
+    # Filter columns by mode
+    if mode == "numeric":
+        valid_cols = df_5.select_dtypes(include='number').columns.tolist()
+    else:
+        valid_cols = df_5.select_dtypes(exclude='number').columns.tolist()
+
+    if not valid_cols:
+        return [], None
+
+    # Use AI to get interesting columns, then filter to our mode
+    try:
+        ai_cols = uni_poss_corr(df_5, dataset_name, target_variable)
+        uni_columns = [c for c in ai_cols if c in valid_cols]
+    except Exception:
+        uni_columns = []
+
+    if not uni_columns:
+        uni_columns = valid_cols[:10]
+    else:
+        uni_columns = uni_columns[:10] # cap to 10 for performance
+
+    analyzer1 = UnivariateAnalyzer1(df_5[uni_columns])
     analysis_results = analyzer1.analyze()
     descriptions = {}
     context_store: list = []
@@ -331,9 +359,7 @@ def uni_analyze_and_visualize(df_5, dataset_name, target_variable):
         descriptions[column] = desc
         context_store.append(f"Univariate [{column}]: {desc}")
 
-    uni_columns = uni_poss_corr(df_5, dataset_name, target_variable)
-    uni_columns = [col for col in uni_columns if col in df_5.columns]
     analyzer = UnivariateAnalyzer(df_5, descriptions, uni_columns)
-    analyzer.visualize()
-    print("Visualization saved to uni_variate_output1.pdf")
-    return context_store
+    pdf_bytes = analyzer.visualize()
+    print("Univariate visualization complete (memory-resident).")
+    return context_store, pdf_bytes
