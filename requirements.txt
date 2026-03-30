@@ -18,3 +18,4 @@ validators
 pymongo
 PyJWT
 streamlit-cookies-controller
+statsmodels
