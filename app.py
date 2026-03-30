@@ -29,7 +29,12 @@ button[data-testid="baseButton-secondary"] {
     color: #e2e8f0 !important;
     font-size: 15px !important;
     font-weight: 600 !important;
-    padding: 10px 22px !important;
+    padding: 8px 12px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    height: auto !important;
+    min-height: 44px !important;
+    line-height: 1.3 !important;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
@@ -49,7 +54,12 @@ button[data-testid="baseButton-primary"] {
     border-radius: 12px !important;
     font-size: 15px !important;
     font-weight: 700 !important;
-    padding: 10px 22px !important;
+    padding: 8px 12px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    height: auto !important;
+    min-height: 44px !important;
+    line-height: 1.3 !important;
     box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.4) !important;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
@@ -134,9 +144,9 @@ html, body, .stApp {
     /* Buttons: larger touch targets on mobile */
     button[data-testid="baseButton-secondary"],
     button[data-testid="baseButton-primary"] {
-        font-size: 14px !important;
-        padding: 10px 16px !important;
-        min-height: 40px !important;
+        font-size: 13.5px !important;
+        padding: 12px 10px !important;
+        min-height: 48px !important;
     }
 
     /* File uploader: full width */
