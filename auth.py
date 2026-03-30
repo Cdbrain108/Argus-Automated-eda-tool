@@ -161,6 +161,113 @@ header {visibility: hidden;}
 [data-testid="stTextInput"] input:focus {border-color: #F97316 !important;box-shadow: 0 0 0 3px rgba(249,115,22,0.18) !important;outline: none !important;}
 [data-testid="stFormSubmitButton"] > button {background: linear-gradient(135deg, #F97316, #EA580C) !important;color: #fff !important; border: none !important;border-radius: 10px !important; font-size: 1rem !important;font-weight: 700 !important; padding: 12px !important;box-shadow: 0 0 24px rgba(249,115,22,0.35) !important;transition: all 0.25s !important;}
 [data-testid="stFormSubmitButton"] > button:hover {box-shadow: 0 0 42px rgba(249,115,22,0.6) !important;transform: translateY(-2px) !important;}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — Tablet (≤ 900px)
+══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+    .arg-nav-link { display: none !important; }
+    .nav-links-container { display: none !important; }
+    .arg-nav-cta { padding: 6px 14px !important; font-size: 14px !important; }
+    .arg-stat { padding: 10px !important; }
+    .arg-stat p:first-child { font-size: 24px !important; }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — Mobile (≤ 600px)
+══════════════════════════════════════════════ */
+@media (max-width: 600px) {
+    /* Navbar */
+    .arg-nav-link { display: none !important; }
+    .nav-links-container { display: none !important; } /* Hide completely to save space */
+    .arg-nav-cta { padding: 5px 10px !important; font-size: 12px !important; }
+
+    /* Shrink large inline logo in navbar */
+    .nav-header-container { height: 60px !important; padding: 0 10px !important; }
+    .nav-logo-text { font-size: 26px !important; }
+    .nav-logo-img { width: 44px !important; height: 44px !important; }
+
+    /* Hero section */
+    .hero-container { padding: 24px 8px 16px !important; }
+    .hero-title { 
+        font-size: 32px !important; 
+        line-height: 1.2 !important; 
+        word-break: keep-all !important; 
+        overflow-wrap: normal !important; 
+    }
+    .hero-subtitle { font-size: 15px !important; padding: 0 4px !important; }
+
+    /* Hero CTA buttons — stack vertically */
+    .hero-btns-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .arg-btn-primary, .arg-btn-secondary {
+        font-size: 15px !important;
+        padding: 10px 16px !important;
+        text-align: center !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Pills row — smaller on mobile */
+    .arg-pill { font-size: 12px !important; padding: 3px 8px !important; }
+
+    /* Hero stats: 2-col instead of 4-col */
+    .stats-grid-container {
+        grid-template-columns: repeat(2, 1fr) !important;
+        max-width: 100% !important;
+    }
+    .arg-stat p:first-child { font-size: 20px !important; }
+    .arg-stat p:last-child { font-size: 13px !important; }
+
+    /* Section headings */
+    h2 { font-size: 22px !important; }
+    .arg-section-tag { font-size: 12px !important; }
+
+    /* Features section: 1 column */
+    div[id="features"] { padding: 24px 12px !important; }
+    .features-grid-container {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Gallery section: 1 column */
+    div[id="gallery"] { padding: 24px 12px !important; }
+    .gallery-grid-container {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* About section: stack to 1 col */
+    div[id="about"] { padding: 24px 12px !important; }
+    .about-main-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    .about-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* FAQ */
+    div[id="faq"] { padding: 24px 12px !important; }
+    div[id="faq"] div[style*="max-width:640px"] { max-width: 100% !important; }
+
+    /* CTA */
+    div[id="upload"] { padding: 24px 12px !important; }
+
+    /* Footer: single column */
+    .footer-grid-container {
+        grid-template-columns: 1fr !important;
+        text-align: center !important;
+        gap: 6px !important;
+        padding: 16px 12px !important;
+    }
+    div[style*="text-align:left"] > span { display: block !important; text-align: center !important; }
+    div[style*="text-align:right"] > span { display: block !important; text-align: center !important; }
+
+    /* Auth form */
+    [data-testid="stTabs"] { padding: 12px 8px 10px !important; }
+    .block-container { padding-left: 6px !important; padding-right: 6px !important; }
+}
 </style>""", unsafe_allow_html=True)
 
 
@@ -178,15 +285,15 @@ def _render_navbar():
     except Exception:
         b64_logo = ""
 
-    logo_img = f'<img src="data:image/png;base64,{b64_logo}" alt="Argus" style="width:80px;height:80px;border-radius:50%;box-shadow:0 0 12px rgba(249,115,22,0.4); border: 2px solid rgba(249,115,22,0.3); transition: transform 0.3s ease;">'
+    logo_img = f'<img src="data:image/png;base64,{b64_logo}" alt="Argus" class="nav-logo-img" style="width:80px;height:80px;border-radius:50%;box-shadow:0 0 12px rgba(249,115,22,0.4); border: 2px solid rgba(249,115,22,0.3); transition: transform 0.3s ease;">'
 
     st.markdown(
-        f'<div style="position:sticky;top:0;z-index:999;background:rgba(10,14,26,0.98);backdrop-filter:blur(15px);border-bottom:1px solid rgba(255,255,255,0.06);padding:0 40px;display:flex;align-items:center;justify-content:space-between; height: 100px;">'
+        f'<div class="nav-header-container" style="position:sticky;top:0;z-index:999;background:rgba(10,14,26,0.98);backdrop-filter:blur(15px);border-bottom:1px solid rgba(255,255,255,0.06);padding:0 40px;display:flex;align-items:center;justify-content:space-between; height: 100px;">'
         f'<div style="display:flex;align-items:center;gap:16px">'
         f'{logo_img}'
-        f'<span style="font-size:48px;font-weight:900;color:#f97316;letter-spacing:-0.02em; line-height: 1;">Argus</span>'
+        f'<span class="nav-logo-text" style="font-size:48px;font-weight:900;color:#f97316;letter-spacing:-0.02em; line-height: 1;">Argus</span>'
         f'</div>'
-        f'<div style="display:flex;gap:4px;align-items:center">'
+        f'<div class="nav-links-container" style="display:flex;gap:4px;align-items:center">'
         f'<a href="#home" class="arg-nav-link">Home</a>'
         f'<a href="#features" class="arg-nav-link">Features</a>'
         f'<a href="#how-it-works" class="arg-nav-link">How it works</a>'
@@ -206,18 +313,18 @@ def _render_navbar():
 
 def _render_hero():
     st.markdown(
-        '<div id="home" style="text-align:center;padding:60px 40px 40px;background:#0a0e1a">'
+        '<div id="home" class="hero-container" style="text-align:center;padding:60px 40px 40px;background:#0a0e1a">'
         '<div style="display:inline-flex;align-items:center;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);border-radius:20px;padding:5px 16px;font-size:17px;color:#f97316;margin-bottom:22px">'
         '<span class="arg-pulse"></span>Now with AI-powered categorical column intelligence</div>'
-        '<h1 style="font-size:54px;font-weight:800;line-height:1.15;margin-bottom:14px;color:#fff">'
+        '<h1 class="hero-title" style="font-size:54px;font-weight:800;line-height:1.15;margin-bottom:14px;color:#fff">'
         'Understand your data<br>'
         '<div class="typing-container">'
         '<span class="typing-text"></span>'
         '<span class="typing-cursor"></span>'
         '</div></h1>'
-        '<p style="font-size:21px;color:#9ca3af;max-width:500px;margin:0 auto 28px;line-height:1.75">'
+        '<p class="hero-subtitle" style="font-size:21px;color:#9ca3af;max-width:500px;margin:0 auto 28px;line-height:1.75">'
         'Upload any CSV or Excel file. Argus automatically generates charts, detects anomalies, and explains every column in plain English — no code required.</p>'
-        '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">'
+        '<div class="hero-btns-container" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">'
         '<a href="#upload" class="arg-btn-primary">Upload your dataset \u2192</a>'
         '<a href="?demo=1" target="_self" class="arg-btn-secondary" style="text-decoration:none !important;">\u26a1 Try Live Demo</a></div>'
         '<div style="margin-bottom:36px">'
@@ -226,7 +333,7 @@ def _render_hero():
         '<span class="arg-pill" style="background:rgba(55,138,221,0.12);color:#85B7EB;border:1px solid rgba(55,138,221,0.2)">AI descriptions included</span>'
         '<span class="arg-pill" style="background:rgba(249,115,22,0.12);color:#FAC775;border:1px solid rgba(249,115,22,0.2)">Smart Categorical Analysis</span>'
         '<span class="arg-pill" style="background:rgba(239,159,39,0.12);color:#FAC775;border:1px solid rgba(239,159,39,0.2)">10+ charts auto-generated</span></div>'
-        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:620px;margin:0 auto">'
+        '<div class="stats-grid-container" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:620px;margin:0 auto">'
         '<div class="arg-stat"><p style="font-size:32px;font-weight:800;color:#f97316;margin:0">13+</p><p style="font-size:17px;color:#6b7280;margin:4px 0 0">Datasets analyzed</p></div>'
         f'<div class="arg-stat"><p style="font-size:32px;font-weight:800;color:#f97316;margin:0">\u2605 {_live_rating()}</p><p style="font-size:17px;color:#6b7280;margin:4px 0 0">User rating</p></div>'
         '<div class="arg-stat"><p style="font-size:32px;font-weight:800;color:#f97316;margin:0">110+</p><p style="font-size:17px;color:#6b7280;margin:4px 0 0">Charts generated</p></div>'
@@ -248,7 +355,7 @@ def _render_features():
         '<span class="arg-section-tag" style="background:rgba(127,119,221,0.15);color:#7F77DD">FEATURES</span>'
         '<h2 style="font-size:34px;font-weight:700;color:#fff;margin-bottom:6px">Everything EDA, automated</h2>'
         '<p style="font-size:19px;color:#6b7280">What Argus does the moment you upload a file</p></div>'
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
+        '<div class="features-grid-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
         # Card 1
         '<div class="arg-card">'
         '<div style="width:38px;height:38px;border-radius:10px;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:24px">⚡</div>'
@@ -370,6 +477,55 @@ def _render_how_it_works():
     .replay-btn:hover { background: rgba(249, 115, 22, 0.1); transform: scale(1.05); }
     
     .insight-pill { background: rgba(255,255,255,0.03); border-left: 3px solid; border-radius: 4px; padding: 7px 10px; font-size: 11px; color: #cbd5e1; line-height: 1.4; opacity: 0; transform: translateX(-8px); transition: all 0.4s; }
+    
+    @media (max-width: 900px) {
+        /* Tablet: 2x2 grid, but aggressively shrink heights to stay under the 600px iframe vertical limit */
+        .cards { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        .card { min-height: 230px; padding: 12px; }
+        .step-badge { width: 28px; height: 28px; font-size: 13px; margin-bottom: 10px; }
+        .card-title { font-size: 14px; margin-bottom: 8px; }
+        .card-desc { font-size: 10px; line-height: 1.4; }
+        .screen { padding: 8px; min-height: 110px; gap: 6px; }
+        .file-icon { width: 18px; height: 24px; font-size: 6px; }
+        .file-name { font-size: 10px; }
+        .file-row { padding: 6px; gap: 8px; }
+        #file-stats { margin-top: 8px !important; gap: 6px !important; }
+        #file-stats > div { padding: 6px; }
+        #file-stats div { font-size: 9px !important; }
+        #file-stats div:last-child { font-size: 13px !important; }
+        .col-row { padding: 4px 6px; gap: 6px; }
+        .col-label { font-size: 10px; }
+        .col-type { font-size: 8px; padding: 2px 6px; }
+        .chart-container { height: 50px; padding-top: 6px; }
+        .insight-pill { font-size: 9.5px; padding: 5px 8px; }
+        .chat-bubble { font-size: 10px; padding: 5px 8px; }
+        .status-bar { font-size: 13px; margin-top: 10px; min-height: 24px; }
+        .replay-btn { margin: 16px auto 0; padding: 8px 20px; font-size: 12px; }
+    }
+    @media (max-width: 600px) {
+        /* Mobile: Keep 2x2 grid but shrink even further for ultra-narrow screens */
+        .cards { gap: 8px; margin-bottom: 10px; }
+        .card { min-height: 200px; padding: 10px; }
+        .step-badge { width: 24px; height: 24px; font-size: 12px; margin-bottom: 8px; }
+        .card-title { font-size: 13px; margin-bottom: 6px; line-height: 1.2; }
+        .card-desc { font-size: 9px; line-height: 1.3; }
+        .screen { padding: 6px; min-height: 90px; gap: 4px; }
+        .file-icon { width: 14px; height: 18px; font-size: 5px; }
+        .file-name { font-size: 9px; }
+        .file-row { padding: 4px; gap: 6px; }
+        #file-stats { margin-top: 6px !important; gap: 4px !important; }
+        #file-stats > div { padding: 4px; }
+        #file-stats div { font-size: 8px !important; }
+        #file-stats div:last-child { font-size: 11px !important; }
+        .col-row { padding: 3px 4px; gap: 4px; }
+        .col-label { font-size: 9px; }
+        .col-type { font-size: 7px; padding: 2px 4px; }
+        .chart-container { height: 40px; padding-top: 4px; }
+        .insight-pill { font-size: 8.5px; padding: 4px 6px; }
+        .chat-bubble { font-size: 8px; padding: 4px 6px; }
+        .status-bar { font-size: 12px; margin-top: 8px; min-height: 20px; }
+        .replay-btn { margin: 10px auto 0; padding: 6px 16px; font-size: 11px; }
+    }
     </style>
     </head>
     <body>
@@ -591,7 +747,7 @@ def _render_how_it_works():
     </html>
     """
     import streamlit.components.v1 as components
-    components.html(html_code, height=600)
+    components.html(html_code, height=660)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -605,7 +761,7 @@ def _render_gallery():
         '<span class="arg-section-tag" style="background:rgba(29,158,117,0.15);color:#1D9E75">GALLERY</span>'
         '<h2 style="font-size:34px;font-weight:700;color:#fff;margin-bottom:6px">Sample AI insights</h2>'
         '<p style="font-size:19px;color:#6b7280">Real descriptions Argus generates — automatically</p></div>'
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
+        '<div class="gallery-grid-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
         '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#7F77DD"><p style="font-size:16px;color:#7F77DD;margin:0 0 8px;font-weight:700;letter-spacing:.04em">AGE — HEART DISEASE DATASET</p><p style="font-size:18px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;Roughly symmetric, mean 47.8 yrs. Most patients aged 40-60. No missing values — clean and ready to use.&rdquo;</p></div>'
         '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#1D9E75"><p style="font-size:16px;color:#1D9E75;margin:0 0 8px;font-weight:700;letter-spacing:.04em">COUNTRY — RETAIL DATASET</p><p style="font-size:18px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;UK dominates at 91% of records. 37 other countries share the rest — high cardinality, consider grouping rare values.&rdquo;</p></div>'
         '<div class="arg-insight" style="background:#1a1f2e;border-left-color:#EF9F27"><p style="font-size:16px;color:#EF9F27;margin:0 0 8px;font-weight:700;letter-spacing:.04em">SALARY — HR DATASET</p><p style="font-size:18px;color:#e5e7eb;line-height:1.7;margin:0">&ldquo;Strongly right-skewed (skew=2.1). Most earn $40K-$70K but outliers up to $500K pull the mean. Consider log transform.&rdquo;</p></div>'
@@ -625,7 +781,7 @@ def _render_gallery():
 def _render_about():
     st.markdown(
         '<div id="about" style="padding:48px 40px;background:rgba(255,255,255,0.02)">'
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center">'
+        '<div class="about-main-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center">'
         '<div>'
         '<span class="arg-section-tag" style="background:rgba(55,138,221,0.15);color:#378ADD">ABOUT</span>'
         '<h2 style="font-size:34px;font-weight:700;color:#fff;margin-bottom:12px">Why Argus?</h2>'
@@ -633,7 +789,7 @@ def _render_about():
         'Exploratory data analysis is the most time-consuming and undervalued step in any data project. Argus was built to eliminate that bottleneck — giving analysts, students, and domain experts instant AI-powered insight into any dataset without writing a single line of code.</p>'
         '<p style="font-size:19px;color:#9ca3af;line-height:1.85">'
         'The name <span style="color:#f97316;font-weight:700">Argus</span> comes from the all-seeing giant of Greek mythology — a watcher with a hundred eyes. That\'s exactly what this tool does: it sees everything in your data that you might miss.</p></div>'
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+        '<div class="about-stats-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
         '<div class="arg-card" style="text-align:center;padding:20px"><p style="font-size:36px;font-weight:800;color:#f97316;margin:0">100%</p><p style="font-size:17px;color:#6b7280;margin-top:5px">No-code EDA</p></div>'
         '<div class="arg-card" style="text-align:center;padding:20px"><p style="font-size:36px;font-weight:800;color:#7F77DD;margin:0">Any</p><p style="font-size:17px;color:#6b7280;margin-top:5px">Domain dataset</p></div>'
         '<div class="arg-card" style="text-align:center;padding:20px"><p style="font-size:36px;font-weight:800;color:#1D9E75;margin:0">&lt;30s</p><p style="font-size:17px;color:#6b7280;margin-top:5px">Full EDA time</p></div>'
@@ -688,7 +844,7 @@ def _render_cta():
 
 def _render_footer():
     st.markdown(
-        '<div style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.06);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;background:#0a0e1a">'
+        '<div class="footer-grid-container" style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.06);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;background:#0a0e1a">'
         '<div style="text-align:left"><span style="font-size:19px;font-weight:700;color:#f97316">Argus</span></div>'
         '<div style="text-align:center"><span style="font-size:17px;color:#4b5563">An Automated EDA Tool · Built with Streamlit &amp; Groq</span></div>'
         '<div style="text-align:right"><span style="font-size:17px;color:#4b5563">2025</span></div>'

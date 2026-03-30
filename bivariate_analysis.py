@@ -353,16 +353,29 @@ def _plot_pair(ax_top, col1: str, col2: str, plot_type: str, df: pd.DataFrame) -
                 )
 
         elif plot_type == "count_bar":
-            ct = pd.crosstab(df[col1], df[col2])
-            ct = ct.head(MAX_CAT_UNIQUE)
-            ct.plot(kind="bar", stacked=True, ax=ax_top, alpha=0.85, colormap="cool")
-            ax_top.set_xlabel(col1, fontsize=9, color=TEXT_COLOR)
-            ax_top.set_ylabel("Count", fontsize=9, color=TEXT_COLOR)
-            ax_top.legend(fontsize=6, loc="upper right")
-            
-            # Always rotate and right-align categorical tick labels to prevent crowding
-            labels = [item.get_text() for item in ax_top.get_xticklabels()]
-            ax_top.set_xticklabels(labels, rotation=45, ha='right')
+            # Use col1 for primary grouping; if col1 has too many uniques, use col2
+            primary = col1 if df[col1].nunique() <= df[col2].nunique() else col2
+            secondary = col2 if primary == col1 else col1
+
+            vc = df[primary].value_counts().head(MAX_CAT_UNIQUE)
+            labels_list = [str(v) for v in vc.index]
+            counts = vc.values
+
+            bars = ax_top.barh(labels_list[::-1], counts[::-1], color=BAR_COLOR, alpha=0.85)
+            ax_top.set_xlabel("Count", fontsize=9, color=TEXT_COLOR)
+            ax_top.set_ylabel(primary, fontsize=9, color=TEXT_COLOR)
+
+            # Value labels on bars
+            for bar in bars:
+                w = bar.get_width()
+                ax_top.text(
+                    w * 1.01,
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{int(w):,}",
+                    va="center",
+                    fontsize=7,
+                    color=TEXT_COLOR,
+                )
 
         # Common styling
         ax_top.set_facecolor("#111827")
@@ -515,10 +528,20 @@ def bi_visualize_analyze(
             # Store for AI chat
             context_store.append(f"Bivariate [{col1} vs {col2}]: {desc}")
 
-            # Build figure: Give more vertical spacing between chart x-axis and description box
-            fig = plt.figure(figsize=(8.5, 6.5), facecolor=BG_COLOR)
-            ax_chart = fig.add_axes([0.10, 0.38, 0.85, 0.52])
-            ax_desc = fig.add_axes([0.05, 0.02, 0.90, 0.22])
+            # Build figure with adaptive layout
+            # desc box sits at bottom; chart floats above with enough room for x-tick labels
+            fig = plt.figure(figsize=(8.5, 7.0), facecolor=BG_COLOR)
+
+            desc_bottom = 0.03
+            desc_height = 0.18
+            desc_top    = desc_bottom + desc_height   # 0.21
+
+            # 0.14 gap between desc top and chart bottom → clears x-axis tick labels
+            chart_bottom = desc_top + 0.14            # ~0.35
+            chart_height = 1.0 - chart_bottom - 0.08  # top margin for title
+
+            ax_chart = fig.add_axes([0.10, chart_bottom, 0.82, chart_height])
+            ax_desc  = fig.add_axes([0.05, desc_bottom,  0.90, desc_height])
 
             # Plot
             actual_plot_type = _plot_pair(ax_chart, col1, col2, plot_type, df)
@@ -542,22 +565,30 @@ def bi_visualize_analyze(
             for spine in ax_desc.spines.values():
                 spine.set_edgecolor(BAR_COLOR)
                 spine.set_linewidth(0.8)
-            wrapped = "\n".join(textwrap.wrap(desc, width=120))
+            wrapped = "\n".join(textwrap.wrap(desc, width=110))
             ax_desc.text(
                 0.5,
-                0.5,
+                0.55,
                 wrapped,
                 ha="center",
                 va="center",
-                fontsize=7.5,
+                fontsize=8,
                 color=TEXT_COLOR,
-                linespacing=1.35,
+                linespacing=1.4,
                 transform=ax_desc.transAxes,
                 wrap=False,
             )
+            ax_desc.text(
+                0.5, 0.04,
+                "✦ AI Insight",
+                ha="center", va="bottom",
+                fontsize=7, color=BAR_COLOR,
+                transform=ax_desc.transAxes,
+                fontweight="bold",
+            )
             ax_desc.set_xticks([])
             ax_desc.set_yticks([])
-            ax_desc.set_xlabel("AI Insight", fontsize=8, color="#64748B", labelpad=4)
+            ax_desc.set_xlabel("", labelpad=0)
 
             pdf.savefig(fig, facecolor=BG_COLOR, bbox_inches="tight")
             plt.close(fig)

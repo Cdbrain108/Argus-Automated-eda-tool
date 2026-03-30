@@ -275,22 +275,26 @@ def show_home_page(guest: bool = False):
     if st.session_state.get("show_rating_modal"):
         _render_sidebar_rating()
 
-    # ── Guest mode: auto-load Titanic demo ─────────────────────────────────────
-    if guest and "df" not in st.session_state:
-        _load_demo_dataset()
-
     if "df" not in st.session_state:
-        st.markdown(
-            '<div class="section-title">📂 Upload Your Data</div>',
-            unsafe_allow_html=True,
-        )
-        _render_upload_widget()
+        if guest:
+            st.markdown('<div class="section-title">👋 Welcome to Trial Mode</div>', unsafe_allow_html=True)
+            st.info("Login to upload your own custom datasets. For now, explore Argus using our natively integrated datasets!")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🚢 Load Titanic Dataset", use_container_width=True, type="primary"):
+                    _process_demo_selection("Titanic Dataset", "demo_data.csv", is_guest=True)
+            with col2:
+                if st.button("🚲 Load Daily Bike Share", use_container_width=True, type="primary"):
+                    _process_demo_selection("Daily Bike Share", "daily-bike-share.csv", is_guest=True)
+            
+            # Prevent tabs rendering until user selects a dataset
+            st.stop()
+        else:
+            st.markdown('<div class="section-title">📂 Upload Your Data</div>', unsafe_allow_html=True)
+            _render_upload_widget()
     else:
         if not guest:
-            st.markdown(
-                '<div class="section-title">📂 Upload Your Data</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown('<div class="section-title">📂 Upload Your Data</div>', unsafe_allow_html=True)
             _render_upload_widget()
         # ── One-time legacy cleanup ──
         for f in ["Uni_variate_output1.pdf", "Bi_variate_output.pdf"]:
@@ -335,41 +339,45 @@ def show_home_page(guest: bool = False):
         )
 
 
-# ── Demo dataset loader (guest mode) ─────────────────────────────────────────
+# ── Demo dataset loader ───────────────────────────────────────────────────────
 
 
-def _load_demo_dataset():
-    """Auto-load the Titanic demo_data.csv and run EDA for guest users."""
-    demo_path = os.path.join(os.path.dirname(__file__), "demo_data.csv")
+def _process_demo_selection(dataset_name: str, file_name: str, is_guest: bool):
+    """Load the user-selected demo dataset and seamlessly inject it into the app."""
+    demo_path = os.path.join(os.path.dirname(__file__), file_name)
     if not os.path.exists(demo_path):
-        st.error("Demo dataset not found. Please contact the administrator.")
+        st.error(f"Demo dataset '{file_name}' not found on the server.")
         return
     try:
-        df_raw = pd.read_csv(demo_path)
-        from ai_encoder import ai_encode_dataframe
+        with st.spinner(f"Loading {dataset_name} & running AI discovery..."):
+            df_raw = pd.read_csv(demo_path)
+            from ai_encoder import ai_encode_dataframe
 
-        df, dataset_name = ai_encode_dataframe(df_raw, "Titanic")
-        eda = run_eda(df)
-        st.session_state.update(
-            df=df,
-            eda_result=eda,
-            file_name="demo_data.csv",
-            dataset_name=dataset_name,
-            chat_history=[
-                {
-                    "role": "assistant",
-                    "content": "👋 Welcome to the **Titanic Demo**! Explore the Overview and Univariate tabs. Login to unlock all features with your own dataset!",
-                }
-            ],
-        )
-        import hashlib
+            df, final_name = ai_encode_dataframe(df_raw, dataset_name)
+            eda = run_eda(df)
+            
+            chat_msg = (
+                f"👋 Welcome to the **{dataset_name} Demo**! Explore the Overview and Univariate tabs. Login to unlock all features safely with your own dataset!"
+                if is_guest else
+                f"✅ **EDA complete for `{dataset_name}`!**  \nFound **{eda['rows']:,} rows** and **{eda['columns']} columns**. Explore the tabs below or ask me anything!"
+            )
+            
+            st.session_state.update(
+                df=df,
+                eda_result=eda,
+                file_name=file_name,
+                dataset_name=final_name,
+                just_uploaded=True,
+                chat_history=[{"role": "assistant", "content": chat_msg}],
+            )
+            import hashlib
 
-        df_json = df.to_json()
-        df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
-        st.session_state["w"] = compute_all_widgets(df_hash, df_json)
+            df_json = df.to_json()
+            df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
+            st.session_state["w"] = compute_all_widgets(df_hash, df_json)
         st.rerun()
     except Exception as ex:
-        st.error(f"Failed to load demo: {ex}")
+        st.error(f"Failed to load {dataset_name}: {ex}")
 
 
 # ── Upload widget ─────────────────────────────────────────────────────────────
@@ -419,6 +427,16 @@ def _render_upload_widget():
             df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
             st.session_state["w"] = compute_all_widgets(df_hash, df_json)
         st.rerun()
+
+    if "df" not in st.session_state:
+        st.markdown('<p style="text-align:center; color:#94A3B8; margin-top:35px; font-size: 0.9rem; font-weight:600; letter-spacing: 0.5px;">— OR EXPLORE A DEMO DATASET —</p>', unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🚢 Load Titanic Dataset", use_container_width=True):
+                _process_demo_selection("Titanic Dataset", "demo_data.csv", is_guest=False)
+        with col2:
+            if st.button("🚲 Load Daily Bike Share", use_container_width=True):
+                _process_demo_selection("Daily Bike Share", "daily-bike-share.csv", is_guest=False)
 
 
 # ── Tabbed dashboard (post-upload) ────────────────────────────────────────────
@@ -1212,8 +1230,13 @@ def _render_data_summary(df: pd.DataFrame):
             color=missing_s.values,
             color_continuous_scale=["#F97316", "#EF4444"],
         )
-        fig.update_layout(**_chart_layout(), height=max(200, len(missing_s) * 36 + 80))
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_coloraxes(showscale=False)
+        fig.update_layout(
+            **_chart_layout(), 
+            height=max(200, len(missing_s) * 36 + 80),
+            dragmode=False
+        )
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
     # ══════════════════════════════════════════════════════════════════════════
     # TASK 1 — DATA PREVIEW TABLE (first 15 rows, styled)
@@ -1258,9 +1281,9 @@ def _render_data_summary(df: pd.DataFrame):
     preview_table_html = f"""
     <div style="overflow-x:auto;max-height:400px;overflow-y:auto;
         border:1px solid rgba(249,115,22,0.3);border-radius:12px;
-        background:#0d1526;margin-bottom:24px;">
-      <table style="width:100%;border-collapse:collapse;font-family:monospace;">
-        <thead><tr>{dtype_badges}</tr></thead>
+        background:#0d1526;margin-bottom:24px;width:100%;text-align:left;">
+      <table style="width:100%;min-width:max-content;margin:0;border-collapse:collapse;font-family:monospace;text-align:left;">
+        <thead style="text-align:left;"><tr>{dtype_badges}</tr></thead>
         <tbody>{data_rows_html}</tbody>
       </table>
     </div>
@@ -2536,9 +2559,9 @@ def _render_multivariate_tab():
     )
 
     if not target_var:
-        st.info("🎯 You have not set a target variable. Go back to Bivariate Analysis to set one, or run discovery mode below.")
+        st.info("🎯 **Discovery Mode Active**: No specific target selected. The AI will autonomously map clusters and interactions across the entire dataset.")
     else:
-        st.info(f"🎯 Analysis Focus: **{target_var}**")
+        st.info(f"🎯 **Analysis Focus**: **{target_var}**")
 
     if st.button("🚀 Run Multivariate Analysis", key="run_multi"):
         with st.spinner("Running deep multivariate analysis…"):
@@ -3211,9 +3234,14 @@ def _inject_css():
         background: linear-gradient(135deg, #FF8C00 0%, #F97316 50%, #EA580C 100%) !important;
         border: 2.5px solid #FDBA74 !important;
         border-bottom: none !important;
-        box-shadow: 0 -8px 30px rgba(249,115,22,0.55), 0 2px 0 #F97316 !important;
+        box-shadow: 0 -8px 30px rgba(249,115,22,0.55) !important;
         transform: translateY(-5px) !important;
         text-shadow: 0 1px 4px rgba(0,0,0,0.4) !important;
+    }
+    /* Hide native Streamlit active tab sweeping underline */
+    [data-baseweb="tab-highlight"] {
+        display: none !important;
+        background-color: transparent !important;
     }
     /* ── Upload zone */
     [data-testid="stFileUploader"] > div:first-child {
@@ -3326,6 +3354,138 @@ def _inject_css():
     /* ── DataFrame / Charts */
     [data-testid="stDataFrame"] { border-radius:12px; overflow:hidden; }
     .js-plotly-plot { border-radius:16px; overflow:hidden; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       RESPONSIVE — Dashboard (home.py)
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* Tablet (≤ 900px) */
+    @media (max-width: 900px) {
+        .block-container { padding-left: 12px !important; padding-right: 12px !important; }
+
+        /* Tabs: allow wrapping */
+        [data-testid="stTabs"] > div:first-child {
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+        }
+        [data-testid="stTab"] {
+            font-size: 0.82rem !important;
+            padding: 8px 12px !important;
+            min-width: 80px !important;
+        }
+
+        /* Header: shrink title */
+        .app-title { font-size: 1.5rem !important; }
+        .app-sub   { font-size: 0.85rem !important; }
+    }
+
+    /* Mobile (≤ 600px) */
+    @media (max-width: 600px) {
+        .block-container { padding-left: 6px !important; padding-right: 6px !important; }
+
+        /* ── App header: stack logo/title/badge vertically */
+        /* Streamlit wraps st.columns to rows on narrow viewports; we reinforce */
+        .argus-logo img { width: 44px !important; height: 44px !important; }
+        .app-title { font-size: 1.3rem !important; }
+        .app-sub   { font-size: 0.78rem !important; }
+        .user-badge { font-size: 0.72rem !important; padding: 5px 8px !important; }
+
+        /* ── Section title */
+        .section-title { font-size: 0.95rem !important; }
+
+        /* ── Tabs: horizontal scroll instead of wrapped cramming */
+        [data-testid="stTabs"] > div:first-child {
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            gap: 8px !important;
+            padding-bottom: 8px !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        [data-testid="stTabs"] > div:first-child::-webkit-scrollbar { height: 4px; }
+        [data-testid="stTabs"] > div:first-child::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.4); border-radius: 4px; }
+
+        [data-testid="stTab"] {
+            font-size: 0.85rem !important;
+            padding: 8px 14px !important;
+            min-width: max-content !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            letter-spacing: 0 !important;
+        }
+        [data-testid="stTab"][aria-selected="true"] {
+            font-size: 0.9rem !important;
+        }
+
+        /* ── Override rigid 3-column inline HTML grids on mobile (e.g. Overview target cards) */
+        div[style*="grid-template-columns:repeat(3,1fr)"] {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+            margin-bottom: 12px !important;
+        }
+
+        /* ── Overview Overview cards: make the 2-col Streamlit layout feel better */
+        /* Since Streamlit's st.columns can't be overridden in CSS alone, we make
+           the custom HTML cards inside them scroll-friendly */
+        div[style*="background:#1a1f2e;border:1px solid #2d3748"] {
+            min-height: unset !important;
+            margin-bottom: 10px !important;
+            padding: 12px 14px !important;
+        }
+
+        /* ── Overview: stat mini-boxes inside the cards */
+        div[style*="display:flex;gap:12px;margin-bottom:16px"] {
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+        div[style*="flex:1;background:#E24B4A11"],
+        div[style*="flex:1;background:#EF9F2711"],
+        div[style*="flex:1;background:#7F77DD11"],
+        div[style*="flex:1;background:#7F77DD22"],
+        div[style*="flex:1;background:#1D9E7522"],
+        div[style*="flex:1;background:#378ADD22"] {
+            flex: unset !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        /* ── Missing value squares: wrap on mobile */
+        div[style*="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"] {
+            gap: 5px !important;
+        }
+
+        /* ── Upload placeholder / hint */
+        .upload-placeholder { padding: 20px 0 14px !important; }
+        .upload-icon-anim { font-size: 2.2rem !important; }
+        .upload-text { font-size: 0.85rem !important; }
+
+        /* ── Metric cards row */
+        .metric-card { padding: 12px 8px !important; border-radius: 12px !important; }
+        .mc-value { font-size: 1.5rem !important; }
+        .mc-icon  { font-size: 1.2rem !important; }
+
+        /* ── Chat bubbles */
+        .chat-bubble { font-size: 0.82rem !important; padding: 10px 12px !important; }
+
+        /* ── Plotly charts: avoid horizontal overflow */
+        .js-plotly-plot { max-width: 100% !important; overflow-x: hidden !important; }
+
+        /* ── AI insight box */
+        div[style*="border-left:3px solid #7F77DD"] {
+            font-size: 12px !important;
+            padding: 8px 10px !important;
+        }
+
+        /* ── Data summary bar labels */
+        .sum-bar-label { width: 70px !important; font-size: 0.7rem !important; }
+        .sum-bar-val   { width: 80px !important; font-size: 0.7rem !important; }
+
+        /* ── Summary header card */
+        .summary-header-card { flex-direction: column !important; align-items: flex-start !important; gap: 6px !important; }
+
+        /* ── Streamlit file uploader zone */
+        [data-testid="stFileUploader"] > div:first-child { padding: 16px !important; }
+    }
     </style>
     """,
         unsafe_allow_html=True,

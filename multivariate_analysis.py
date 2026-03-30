@@ -83,20 +83,23 @@ def _style_ax(ax):
         sp.set_edgecolor(SPINE_COLOR)
 
 
-def _insight_box(fig, text, rect=(0.04, 0.01, 0.92, 0.22)):
+def _insight_box(fig, text, rect=(0.04, 0.03, 0.92, 0.18)):
     """Render the AI insight panel — identical look to bivariate."""
     ax = fig.add_axes(rect)
     ax.set_facecolor(PANEL_COLOR)
     for sp in ax.spines.values():
         sp.set_edgecolor(BAR_COLOR)
         sp.set_linewidth(0.9)
-    wrapped = "\n".join(textwrap.wrap(text, width=105))
-    ax.text(0.5, 0.5, wrapped, ha="center", va="center",
-            fontsize=9, color=TEXT_COLOR, linespacing=1.5,
+    wrapped = "\n".join(textwrap.wrap(text, width=115))
+    ax.text(0.5, 0.58, wrapped, ha="center", va="center",
+            fontsize=8, color=TEXT_COLOR, linespacing=1.45,
+            transform=ax.transAxes)
+    ax.text(0.5, 0.06, "💡 What does this mean?",
+            ha="center", va="bottom", fontsize=7.5,
+            color=BAR_COLOR, fontweight="bold",
             transform=ax.transAxes)
     ax.set_xticks([]); ax.set_yticks([])
-    ax.set_xlabel("💡 What does this mean?", fontsize=8,
-                  color="#64748B", labelpad=4)
+    ax.set_xlabel("", labelpad=0)
 
 
 def _ask_ai(prompt, max_tokens=130):
@@ -191,8 +194,8 @@ def _page_relationships(pdf, df, num_cols, dataset_name):
     corr     = _clean(df, cols).corr(method="pearson")
     fig_size = max(7, n * 0.75 + 2)
 
-    fig, ax = plt.subplots(figsize=(fig_size, fig_size * 0.78), facecolor=BG_COLOR)
-    fig.subplots_adjust(bottom=0.28, top=0.88, left=0.18, right=0.95)
+    fig, ax = plt.subplots(figsize=(fig_size, fig_size * 0.82), facecolor=BG_COLOR)
+    fig.subplots_adjust(bottom=0.38, top=0.88, left=0.18, right=0.95)
 
     im = ax.imshow(corr.values, cmap="RdYlGn", vmin=-1, vmax=1, aspect="auto")
     ax.set_xticks(range(n)); ax.set_yticks(range(n))
@@ -282,7 +285,7 @@ def _page_top_influencers(pdf, df, num_cols, target, dataset_name):
 
     fig, ax = plt.subplots(figsize=(10, max(4, len(labels) * 0.55 + 2)),
                            facecolor=BG_COLOR)
-    fig.subplots_adjust(bottom=0.28, left=0.02, right=0.88)
+    fig.subplots_adjust(bottom=0.38, left=0.02, right=0.88)
 
     bar_cols = [BAR_COLOR] + [LINE_COLOR] * (len(labels) - 1)
     bars     = ax.barh(labels[::-1], pct[::-1],
@@ -364,7 +367,7 @@ def _page_natural_groups(pdf, df, num_cols, target, dataset_name):
                "#FACC15", "#EC4899", "#14B8A6", "#F43F5E"]
 
     fig, ax = plt.subplots(figsize=(9, 6.5), facecolor=BG_COLOR)
-    fig.subplots_adjust(bottom=0.28, top=0.88)
+    fig.subplots_adjust(bottom=0.38, top=0.88)
 
     for i in range(k):
         mask = labels == i
@@ -432,7 +435,7 @@ def _page_group_profiles(pdf, df, num_cols, dataset_name):
 
     fig, axes = plt.subplots(1, k, figsize=(3.5 * k, 6.5),
                               facecolor=BG_COLOR, sharey=True)
-    fig.subplots_adjust(bottom=0.28, top=0.88, wspace=0.08)
+    fig.subplots_adjust(bottom=0.38, top=0.88, wspace=0.08)
     if k == 1:
         axes = [axes]
 
@@ -500,7 +503,7 @@ def _page_connection_map(pdf, df, num_cols, dataset_name):
     corr = _clean(df, cols).corr(method="pearson").values
 
     fig, ax = plt.subplots(figsize=(9, 7.5), facecolor=BG_COLOR)
-    fig.subplots_adjust(bottom=0.26, top=0.90)
+    fig.subplots_adjust(bottom=0.36, top=0.90)
     ax.set_facecolor(BG_COLOR)
     ax.set_aspect("equal")
     ax.axis("off")
@@ -557,7 +560,7 @@ def _page_connection_map(pdf, df, num_cols, dataset_name):
         f"In plain English, 2-3 sentences, explain what it means "
         f"for a column to be 'well connected' and why that matters."
     )
-    _insight_box(fig, insight, rect=(0.04, 0.01, 0.92, 0.20))
+    _insight_box(fig, insight, rect=(0.04, 0.03, 0.92, 0.18))
     pdf.savefig(fig, facecolor=BG_COLOR, bbox_inches="tight")
     plt.close(fig)
     print("  [5/5] Connection map done.")

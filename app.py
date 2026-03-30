@@ -109,7 +109,64 @@ button:focus {
     outline: none !important;
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2) !important;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL MOBILE RESPONSIVE — viewport fixes for all screens
+   ─────────────────────────────────────────────────────────────*/
+
+/* Prevent horizontal scroll on mobile */
+html, body, .stApp {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+}
+
+/* Streamlit's main block — full width on mobile */
+.main .block-container {
+    max-width: 100% !important;
+}
+
+@media (max-width: 600px) {
+    /* Streamlit sidebar toggle: ensure it's visible */
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+    }
+
+    /* Buttons: larger touch targets on mobile */
+    button[data-testid="baseButton-secondary"],
+    button[data-testid="baseButton-primary"] {
+        font-size: 14px !important;
+        padding: 10px 16px !important;
+        min-height: 40px !important;
+    }
+
+    /* File uploader: full width */
+    [data-testid="stFileUploader"] {
+        width: 100% !important;
+    }
+
+    /* Plotly charts: prevent overflow */
+    .js-plotly-plot, .plot-container {
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    /* DataFrames: scrollable horizontally */
+    [data-testid="stDataFrame"] {
+        overflow-x: auto !important;
+    }
+
+    /* Select boxes / sliders */
+    [data-testid="stSelectbox"], [data-testid="stSlider"] {
+        width: 100% !important;
+    }
+}
 </style>""", unsafe_allow_html=True)
+
+# Inject viewport meta tag for proper mobile rendering
+st.markdown(
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">',
+    unsafe_allow_html=True,
+)
 
 from auth import show_auth_page, authenticate_from_cookie
 from home import show_home_page
