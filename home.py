@@ -278,13 +278,13 @@ def show_home_page(guest: bool = False):
         if guest:
             st.markdown('<div class="section-title">👋 Welcome to Trial Mode</div>', unsafe_allow_html=True)
             st.info("Login to upload your own custom datasets. For now, explore Argus using our natively integrated datasets!")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🚢 Load Titanic Dataset", use_container_width=True, type="primary"):
-                    _process_demo_selection("Titanic Dataset", "demo_data.csv", is_guest=True)
-            with col2:
-                if st.button("🚲 Load Daily Bike Share", use_container_width=True, type="primary"):
-                    _process_demo_selection("Daily Bike Share", "daily-bike-share.csv", is_guest=True)
+            # ── Mobile-friendly: stack buttons vertically ──
+            st.markdown('<div class="demo-btn-stack">', unsafe_allow_html=True)
+            if st.button("🚢 Load Titanic Dataset", use_container_width=True, type="primary", key="guest_titanic_btn"):
+                _process_demo_selection("Titanic Dataset", "demo_data.csv", is_guest=True)
+            if st.button("🚲 Load Daily Bike Share", use_container_width=True, type="primary", key="guest_bike_btn"):
+                _process_demo_selection("Daily Bike Share", "daily-bike-share.csv", is_guest=True)
+            st.markdown('</div>', unsafe_allow_html=True)
             
             # Prevent tabs rendering until user selects a dataset
             st.stop()
@@ -376,7 +376,10 @@ def _process_demo_selection(dataset_name: str, file_name: str, is_guest: bool):
             st.session_state["w"] = compute_all_widgets(df_hash, df_json)
         st.rerun()
     except Exception as ex:
-        st.error(f"Failed to load {dataset_name}: {ex}")
+        # Trim the error to avoid dumping raw JSON / huge tracebacks
+        err_str = str(ex)
+        short_err = err_str[:120] + "..." if len(err_str) > 120 else err_str
+        st.error(f"❌ Failed to load **{dataset_name}**. Please try again or choose another dataset.\n\n_Details: {short_err}_")
 
 
 # ── Upload widget ─────────────────────────────────────────────────────────────
@@ -1838,34 +1841,31 @@ Rules:
         return fallback
 
     # ── Generate cards ────────────────────────────────────────────────────────
-    st.markdown("### 📊 Dataset At a Glance")
+    st.markdown('<div class="section-title">📊 Dataset At a Glance</div>', unsafe_allow_html=True)
     with st.spinner("Generating dataset overview…"):
         cards = _get_cards()
 
-    # ── Build 3-column HTML grid ──────────────────────────────────────────────
+    # ── Horizontal scrollable card strip ──────────────────────────────────────
     card_html_parts = []
     for card in cards:
-        label = card.get("label", "")
-        value = card.get("value", "")
+        label    = card.get("label", "")
+        value    = card.get("value", "")
         sublabel = card.get("sublabel", card.get("sub", ""))
-        reason = card.get("reason", "")
+        reason   = card.get("reason", "")
         card_html_parts.append(
-            f'<div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;'
-            f'padding:20px 24px;cursor:default;transition:border-color 0.2s;position:relative" '
-            f'title="{reason}">'
-            f'<p style="color:#9ca3af;font-size:13px;margin:0 0 8px;font-weight:400">{label}</p>'
-            f'<p style="color:#ffffff;font-size:28px;font-weight:700;margin:0 0 6px;letter-spacing:-0.5px">{value}</p>'
-            f'<p style="color:#6b7280;font-size:12px;margin:0">{sublabel}</p>'
-            f"</div>"
+            f'<div class="glance-card" title="{reason}">'
+            f'<p class="glance-label">{label}</p>'
+            f'<p class="glance-value">{value}</p>'
+            f'<p class="glance-sub">{sublabel}</p>'
+            f'</div>'
         )
 
     full_html = (
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">'
+        '<div class="glance-scroll-row">'
         + "".join(card_html_parts)
-        + "</div>"
+        + '</div>'
     )
     st.markdown(full_html, unsafe_allow_html=True)
-    st.caption("Hover over any card for insight")
 
 
 # ── Numeric Distribution ──────────────────────────────────────────────────────
@@ -2046,7 +2046,7 @@ def _render_numeric_distribution(df: pd.DataFrame):
         margin=dict(l=0, r=0, t=20, b=0),
         height=350,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
     # ── STEP 4: Groq AI description (cached) ────────────────────────────────
     cache_key = f"{filename}_{selected_col}_{mean_val}_{std_val}"
@@ -2375,7 +2375,7 @@ def _render_categorical_insights(df: pd.DataFrame):
         uniformtext_mode="hide",
         font=dict(color="#9ca3af"),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
     # ── 8. Groq description ───────────────────────────────────────────────────
     with st.spinner("Generating AI insight…"):
@@ -2609,14 +2609,14 @@ def _render_feature_tab():
         # Layout: Row 1 (Importance + Heatmap)
         r1_c1, r1_c2 = st.columns([6, 4])
         with r1_c1:
-            st.plotly_chart(results["importance_fig"], use_container_width=True)
+            st.plotly_chart(results["importance_fig"], use_container_width=True, config={"displayModeBar": False})
         with r1_c2:
-            st.plotly_chart(results["heatmap_fig"], use_container_width=True)
+            st.plotly_chart(results["heatmap_fig"], use_container_width=True, config={"displayModeBar": False})
 
         # Layout: Row 2 (Top Relationship + AI Insight)
         r2_c1, r2_c2 = st.columns([5, 5])
         with r2_c1:
-            st.plotly_chart(results["relationship_fig"], use_container_width=True)
+            st.plotly_chart(results["relationship_fig"], use_container_width=True, config={"displayModeBar": False})
         with r2_c2:
             st.markdown(
                 f"""
@@ -3170,6 +3170,42 @@ def _inject_css():
         50%    {filter:drop-shadow(0 0 22px rgba(249,115,22,0.85))}
     }
     .logo-icon { font-size:2.8rem; margin-top:10px; }
+    /* ── Hide Plotly modebar (zoom/pan toolbar) on all charts */
+    .modebar { display: none !important; }
+    .modebar-container { display: none !important; }
+    [data-testid="stPlotlyChart"] .modebar { display: none !important; }
+    .js-plotly-plot .plotly .modebar { display: none !important; }
+    /* ── Glance card strip */
+    .glance-scroll-row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 12px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding-bottom: 10px !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(249,115,22,0.4) transparent !important;
+        margin-bottom: 20px !important;
+    }
+    .glance-scroll-row::-webkit-scrollbar { height: 5px; }
+    .glance-scroll-row::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.4); border-radius: 4px; }
+    .glance-card {
+        background: #1a1f2e;
+        border: 1px solid #2d3748;
+        border-radius: 12px;
+        padding: 18px 20px;
+        cursor: default;
+        transition: border-color 0.2s, transform 0.2s;
+        flex: 0 0 auto;
+        min-width: 140px;
+        max-width: 180px;
+    }
+    .glance-card:hover { border-color: rgba(249,115,22,0.5); transform: translateY(-2px); }
+    .glance-label { color: #9ca3af; font-size: 12px; margin: 0 0 8px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .glance-value { color: #ffffff; font-size: 26px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .glance-sub   { color: #6b7280; font-size: 11px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* ── Header */
     .app-title  { font-size:2rem; font-weight:800; margin:0; color:#F97316; }
     .app-sub    { font-size:1rem; font-weight:400; color:#94A3B8; }
@@ -3300,13 +3336,17 @@ def _inject_css():
         background: rgba(249,115,22,0.12) !important;
         border: 1px solid rgba(249,115,22,0.35) !important;
         color: #FB923C !important;
-        border-radius: 20px !important;
-        font-size: 0.88rem !important;
+        border-radius: 12px !important;
+        font-size: 0.9rem !important;
         font-weight: 600 !important;
-        padding: 8px 20px !important;
+        padding: 10px 20px !important;
+        min-height: 42px !important;
         transition: all 0.2s !important;
         white-space: normal !important;
         height: auto !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        display: block !important;
     }
     [data-testid="stButton"] > button:hover {
         background: rgba(249,115,22,0.25) !important;
@@ -3315,6 +3355,23 @@ def _inject_css():
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 16px rgba(249,115,22,0.3) !important;
     }
+    /* Primary (type="primary") buttons — solid filled */
+    [data-testid="stButton"] > button[kind="primary"],
+    [data-testid="stButton"] > button[data-testid*="primary"] {
+        background: linear-gradient(135deg, #F97316 0%, #EA580C 100%) !important;
+        border: none !important;
+        color: #fff !important;
+        box-shadow: 0 4px 18px rgba(249,115,22,0.35) !important;
+    }
+    [data-testid="stButton"] > button[kind="primary"]:hover,
+    [data-testid="stButton"] > button[data-testid*="primary"]:hover {
+        background: linear-gradient(135deg, #FB923C 0%, #F97316 100%) !important;
+        box-shadow: 0 6px 24px rgba(249,115,22,0.55) !important;
+        transform: translateY(-2px) !important;
+    }
+    /* Demo dataset button stack — full-width, spaced */
+    .demo-btn-stack { display: flex; flex-direction: column; width: 100%; }
+    .demo-btn-stack [data-testid="stButton"] { width: 100% !important; }
     /* Form submit buttons (Login / Sign Up) */
     [data-testid="stFormSubmitButton"] > button {
         background: linear-gradient(135deg, rgba(249,115,22,0.2), rgba(234,88,12,0.15)) !important;
@@ -3392,6 +3449,23 @@ def _inject_css():
         /* ── Section title */
         .section-title { font-size: 0.95rem !important; }
 
+        /* ── Buttons: full-width, proper touch target, separated */
+        [data-testid="stButton"] {
+            width: 100% !important;
+            margin-bottom: 2px !important;
+        }
+        [data-testid="stButton"] > button {
+            width: 100% !important;
+            min-height: 46px !important;
+            font-size: 0.95rem !important;
+            padding: 10px 16px !important;
+            border-radius: 12px !important;
+            line-height: 1.4 !important;
+        }
+        /* Ensure Streamlit column-based layouts don't crash buttons together */
+        [data-testid="stHorizontalBlock"] { gap: 8px !important; }
+        [data-testid="column"] { min-width: 0 !important; }
+
         /* ── Tabs: horizontal scroll instead of wrapped cramming */
         [data-testid="stTabs"] > div:first-child {
             flex-wrap: nowrap !important;
@@ -3447,6 +3521,18 @@ def _inject_css():
             width: 100% !important;
             box-sizing: border-box !important;
         }
+
+        /* ── Protect glance strip — always horizontal on all screen sizes */
+        .glance-scroll-row {
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+        }
+        .glance-card {
+            flex: 0 0 auto !important;
+            min-width: 130px !important;
+            max-width: 165px !important;
+        }
+        .glance-value { font-size: 22px !important; }
 
         /* ── Missing value squares: wrap on mobile */
         div[style*="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"] {

@@ -267,6 +267,22 @@ header {visibility: hidden;}
     /* Auth form */
     [data-testid="stTabs"] { padding: 12px 8px 10px !important; }
     .block-container { padding-left: 6px !important; padding-right: 6px !important; }
+
+    /* Streamlit buttons on mobile — ensure proper sizing & no joining */
+    [data-testid="stButton"] > button {
+        min-height: 48px !important;
+        font-size: 0.95rem !important;
+        padding: 12px 16px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    [data-testid="stButton"] {
+        width: 100% !important;
+        margin-bottom: 2px !important;
+    }
+    /* Streamlit columns on mobile — add gap */
+    [data-testid="stHorizontalBlock"] { gap: 8px !important; }
+    [data-testid="column"] { min-width: 0 !important; }
 }
 </style>""", unsafe_allow_html=True)
 
