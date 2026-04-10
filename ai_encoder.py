@@ -80,6 +80,21 @@ def ai_encode_dataframe(df: pd.DataFrame, dataset_name: str) -> (pd.DataFrame, s
         renames = result.get("column_renames", {})
         if renames:
             df_encoded.rename(columns=renames, inplace=True)
+            
+            # Ensure unique column names to prevent to_json() failures
+            if df_encoded.columns.duplicated().any():
+                new_cols = []
+                seen = set()
+                for c in df_encoded.columns:
+                    base_name = str(c)
+                    new_name = base_name
+                    counter = 1
+                    while new_name in seen:
+                        new_name = f"{base_name}_{counter}"
+                        counter += 1
+                    seen.add(new_name)
+                    new_cols.append(new_name)
+                df_encoded.columns = new_cols
                 
     except Exception as e:
         print(f"AI Encoding failed: {e}")

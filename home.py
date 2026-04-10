@@ -376,6 +376,11 @@ def _process_demo_selection(dataset_name: str, file_name: str, is_guest: bool):
             st.session_state["w"] = compute_all_widgets(df_hash, df_json)
         st.rerun()
     except Exception as ex:
+        # Cleanup partial state to prevent UI getting stuck
+        for k in ["df", "eda_result", "w", "file_name", "dataset_name"]:
+            if k in st.session_state:
+                del st.session_state[k]
+        
         # Trim the error to avoid dumping raw JSON / huge tracebacks
         err_str = str(ex)
         short_err = err_str[:120] + "..." if len(err_str) > 120 else err_str
@@ -394,41 +399,52 @@ def _render_upload_widget():
         key="file_uploader",
     )
     if uploaded and "df" not in st.session_state:
-        with st.spinner("Processing file & AI decoding numeric categories..."):
-            _show_processing_bar()
-            df_raw = load_file(uploaded)
-            dataset_name = uploaded.name.rsplit(".", 1)[0]
+        try:
+            with st.spinner("Processing file & AI decoding numeric categories..."):
+                _show_processing_bar()
+                df_raw = load_file(uploaded)
+                dataset_name = uploaded.name.rsplit(".", 1)[0]
 
-            # ── AI Encoding Layer ──
-            from ai_encoder import ai_encode_dataframe
+                # ── AI Encoding Layer ──
+                from ai_encoder import ai_encode_dataframe
 
-            df, dataset_name = ai_encode_dataframe(df_raw, dataset_name)
+                df, dataset_name = ai_encode_dataframe(df_raw, dataset_name)
 
-            eda = run_eda(df)
-            st.session_state.update(
-                df=df,
-                eda_result=eda,
-                file_name=uploaded.name,
-                dataset_name=dataset_name,
-                just_uploaded=True,
-                chat_history=[
-                    {
-                        "role": "assistant",
-                        "content": (
-                            f"✅ **EDA complete for `{dataset_name}`!**  \n"
-                            f"Found **{eda['rows']:,} rows** and **{eda['columns']} columns**. "
-                            "Explore the tabs below or ask me anything!"
-                        ),
-                    }
-                ],
-            )
-            # ── Pre-compute all Overview widget data once ──
-            import hashlib
+                eda = run_eda(df)
+                st.session_state.update(
+                    df=df,
+                    eda_result=eda,
+                    file_name=uploaded.name,
+                    dataset_name=dataset_name,
+                    just_uploaded=True,
+                    chat_history=[
+                        {
+                            "role": "assistant",
+                            "content": (
+                                f"✅ **EDA complete for `{dataset_name}`!**  \n"
+                                f"Found **{eda['rows']:,} rows** and **{eda['columns']} columns**. "
+                                "Explore the tabs below or ask me anything!"
+                            ),
+                        }
+                    ],
+                )
+                # ── Pre-compute all Overview widget data once ──
+                import hashlib
 
-            df_json = df.to_json()
-            df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
-            st.session_state["w"] = compute_all_widgets(df_hash, df_json)
-        st.rerun()
+                df_json = df.to_json()
+                df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
+                st.session_state["w"] = compute_all_widgets(df_hash, df_json)
+            st.rerun()
+        except Exception as ex:
+            # Cleanup partial state to prevent UI getting stuck
+            for k in ["df", "eda_result", "w", "file_name", "dataset_name"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+                    
+            err_str = str(ex)
+            short_err = err_str[:120] + "..." if len(err_str) > 120 else err_str
+            file_name = getattr(uploaded, "name", "dataset")
+            st.error(f"❌ Failed to process upload **{file_name}**. Please try again.\n\n_Details: {short_err}_")
 
     if "df" not in st.session_state:
         st.markdown('<p style="text-align:center; color:#94A3B8; margin-top:35px; font-size: 0.9rem; font-weight:600; letter-spacing: 0.5px;">— OR EXPLORE A DEMO DATASET —</p>', unsafe_allow_html=True)
