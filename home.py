@@ -15,7 +15,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
-from utils import load_file, run_eda, chat_response, get_groq_client
+from utils import load_file, run_eda, chat_response, get_groq_client, get_beginner_term
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
@@ -91,6 +91,21 @@ def dark_card(content_html, badge_text=None, badge_color=None):
     )
 
 
+def get_term_label(term: str) -> str:
+    """Return beginner-friendly label if mode is enabled."""
+    if st.session_state.get("beginner_mode"):
+        return get_beginner_term(term)
+    return term
+
+
+def tooltip_icon(term: str) -> str:
+    """Return a tooltip icon with explanation if beginner mode is on."""
+    if not st.session_state.get("beginner_mode"):
+        return ""
+    explanation = get_beginner_term(term)
+    return f' <span title="{explanation}" style="cursor:help;font-size:14px">ℹ️</span>'
+
+
 # ── compute_all_widgets (cached per-upload) ──────────────────────────────────────
 
 
@@ -106,7 +121,8 @@ def compute_all_widgets(df_json_hash: str, df_json: str) -> dict:
     except ImportError:
         _has_scipy = False
 
-    df = pd.read_json(df_json)
+    import io
+    df = pd.read_json(io.StringIO(df_json), orient="split")
     results = {}
 
     # --- health score ---
@@ -295,7 +311,18 @@ def show_home_page(guest: bool = False):
         if not guest:
             st.markdown('<div class="section-title">📂 Upload Your Data</div>', unsafe_allow_html=True)
             _render_upload_widget()
-        # ── One-time legacy cleanup ──
+
+        # ── Beginner Mode Toggle ─────────────────────────────────────────────
+        with st.sidebar:
+            beginner_mode = st.toggle(
+                "👶 Beginner Mode",
+                value=st.session_state.get("beginner_mode", False),
+                help="Switch to beginner-friendly explanations",
+            )
+            if beginner_mode != st.session_state.get("beginner_mode"):
+                st.session_state["beginner_mode"] = beginner_mode
+
+        # ── One-time legacy cleanup ─────────────────────────────────────────
         for f in ["Uni_variate_output1.pdf", "Bi_variate_output.pdf"]:
             if os.path.exists(f):
                 try:
@@ -371,7 +398,7 @@ def _process_demo_selection(dataset_name: str, file_name: str, is_guest: bool):
             )
             import hashlib
 
-            df_json = df.to_json()
+            df_json = df.to_json(orient="split")
             df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
             st.session_state["w"] = compute_all_widgets(df_hash, df_json)
         st.rerun()
@@ -431,7 +458,7 @@ def _render_upload_widget():
                 # ── Pre-compute all Overview widget data once ──
                 import hashlib
 
-                df_json = df.to_json()
+                df_json = df.to_json(orient="split")
                 df_hash = hashlib.md5(pd.util.hash_pandas_object(df).values).hexdigest()
                 st.session_state["w"] = compute_all_widgets(df_hash, df_json)
             st.rerun()
@@ -661,7 +688,7 @@ def _render_overview_tab(df: pd.DataFrame, eda: dict):
             dark_card(
                 f'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">'
                 f"<div>"
-                f'<p style="font-size:18px;font-weight:600;color:#fff;margin:0">Dataset Health Score</p>'
+                f'<p style="font-size:18px;font-weight:600;color:#fff;margin:0">Dataset Health Score{tooltip_icon("Health Score")}</p>'
                 f'<p style="font-size:14px;color:#6b7280;margin:6px 0 0">auto-computed on upload</p>'
                 f"</div>"
                 f'<div style="position:relative;width:90px;height:90px">'
@@ -675,11 +702,11 @@ def _render_overview_tab(df: pd.DataFrame, eda: dict):
                 f"align-items:center;justify-content:center;font-size:24px;font-weight:700;"
                 f'color:{score_color}">{score}</div>'
                 f"</div></div>"
-                + penalty_bar("Missing", w["missing_penalty"])
-                + penalty_bar("Duplicates", w["dup_penalty"], 20)
-                + penalty_bar("Outliers", w["outlier_penalty"])
+                + penalty_bar(get_term_label("Missing Values"), w["missing_penalty"])
+                + penalty_bar(get_term_label("Duplicates"), w["dup_penalty"], 20)
+                + penalty_bar(get_term_label("Outliers"), w["outlier_penalty"])
                 + '<p style="font-size:13px;color:#6b7280;margin:12px 0 0;font-style:italic">'
-                "Score = 100 minus missing, duplicate and outlier penalties</p>",
+                f"Score = 100 minus missing, duplicate and outlier penalties{tooltip_icon('Health Score')}</p>",
                 "HEALTH",
                 "#1D9E75",
             ),
@@ -730,7 +757,7 @@ def _render_overview_tab(df: pd.DataFrame, eda: dict):
 
         st.markdown(
             dark_card(
-                '<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Missing Value Map</p>'
+                f'<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Missing Value Map{tooltip_icon("Missing Values")}</p>'
                 '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">per-column severity at a glance</p>'
                 + chart_html
                 + legend,
@@ -764,7 +791,7 @@ def _render_overview_tab(df: pd.DataFrame, eda: dict):
 
         st.markdown(
             dark_card(
-                '<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Outlier Detection</p>'
+                f'<p style="font-size:18px;font-weight:600;color:#fff;margin:0 0 6px">Outlier Detection{tooltip_icon("Outliers")}</p>'
                 '<p style="font-size:14px;color:#6b7280;margin:0 0 16px">IQR method across all numeric columns</p>'
                 '<div style="display:flex;gap:12px;margin-bottom:16px">'
                 f'<div style="flex:1;background:#E24B4A11;border:1px solid #E24B4A33;border-radius:8px;padding:14px;text-align:center">'

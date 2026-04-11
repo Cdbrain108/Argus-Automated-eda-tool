@@ -37,6 +37,41 @@ def get_groq_client():
 # calling it fresh avoids reuse limits or rate limit tracking on a single IP/client if Groq tracks it.
 MAX_CONTEXT_CHARS = 3000   # trim llm_context to stay within token limits
 
+BEGINNER_TERMS = {
+    "Outliers": "Unusual values that stand out from the rest",
+    "Skewness": "Data leaning more to one side",
+    "Correlation": "How two things move together",
+    "Missing Values": "Empty cells that need attention",
+    "Health Score": "How clean and ready your data is",
+    "Duplicates": "Repeated rows that should be unique",
+    "Data Type": "What kind of data (text, number, date)",
+    "Distribution": "How values are spread across a column",
+    "Mean": "The average of all values",
+    "Median": "The middle value when sorted",
+    "Standard Deviation": "How spread out the values are",
+    "Variance": "How much values differ from the average",
+    "Percentile": "Value below which a percentage of data falls",
+    "Categorical": "Data that represents categories or groups",
+    "Numerical": "Data that represents numbers/quantities",
+    "Feature": "A column in your dataset",
+    "EDA": "Exploratory Data Analysis - looking at your data to understand it",
+    "Bivariate": "Looking at two things at once",
+    "Multivariate": "Looking at many things at once",
+    "Univariate": "Looking at one thing at a time",
+    "Histogram": "A chart showing how values are distributed",
+    "Box Plot": "A chart showing the spread of data with outliers",
+    "Heatmap": "A color-coded chart showing relationships",
+    "Scatter Plot": "Dots showing how two things relate",
+    "KDE": "Smooth curve showing data distribution",
+    "Kurtosis": "How pointy or flat the distribution is",
+    "Encode": "Convert text to numbers so computers can understand",
+}
+
+
+def get_beginner_term(term: str) -> str:
+    """Return beginner-friendly explanation for a technical term."""
+    return BEGINNER_TERMS.get(term, term)
+
 
 # ─── File Processing ──────────────────────────────────────────────────────────
 
